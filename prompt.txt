@@ -1,0 +1,189 @@
+bantu buatkan planing palningall.md secara detail untuk membuat aplikasi manajemen pegawai:
+dengan techologi berikut:
+
+-backend:
+-- bun
+-- elysia
+-- drizzle
+-- postgresql
+-- uuid
+-- jwt
+-- bcrypt
+-- dan sarankan techologi lain jika ada yang lebih baik
+
+-frontend:
+-- mobile app
+--- flutter
+--- dan sarankan techologi lain jika ada yang lebih baik
+
+-- web 
+--- react.js
+--- next.js
+--- tailwindcss
+--- shadcn ui
+--- typescript   
+--- dan sarankan techologi lain jika ada yang lebih baik
+
+-fitur:
+--mobile app pegawai:
+    1. absensi pegawai:
+       a. skema absensi:
+          i. kantor:
+             - jam masuk
+             - jam pulang
+             - lokasi kantor unit kerja
+             - foto selfie
+          ii. Dinas Luar (DL):
+              * ada beberapa skema yang bisa di sesuaikan oleh admin/pimpinan langsung
+                1. Dinas Luar Full:
+                   - jam masuk:
+                      -- lokasi dimana saja
+                      -- foto selfie
+                   - sampai lokasi Dinas Luar:
+                      -- lokasi dinas luar yang di ajukan
+                      -- foto selfie
+                   - pulang dari lokasi Dinas Luar:
+                      -- lokasi dimanasaja
+                      -- foto selfie
+                2. Masuk Kerja -> Dinas Luar -> Pulang:
+                   - jam masuk:
+                      -- lokasi kantor/unit kerja
+                      -- foto selfie
+                   - sampai lokasi Dinas Luar:
+                      -- lokasi dinas luar yang di ajukan
+                      -- foto selfie
+                   - pulang dari lokasi Dinas Luar:
+                      -- lokasi dimanasaja
+                      -- foto selfie
+                3. Dinas Luar -> masuk kerja:
+                   - jam masuk:
+                      -- lokasi dimanasaja
+                      -- foto selfie
+                   - sampai lokasi Dinas Luar:
+                      -- lokasi dinas luar yang di ajukan
+                      -- foto selfie
+                   - sampai kantor:
+                      -- lokasi kantor/unit kerja
+                      -- foto selfie  
+                   - jam pulang:
+                      -- lokasi kantor/unit kerja
+                      -- foto selfie
+    2. Cuti pegawai:
+       a. Cuti Tahunan:
+          i. alur:
+             - pegawai mengajukan cuti
+             - atasan menyetujui cuti
+             - pegawai mendapatkan notifikasi cuti disetujui
+             - pegawai mendapatkan notifikasi cuti ditolak
+             - pegawai mendapatkan notifikasi cuti dibatalkan
+       b. Cuti Melahirkan: 
+          i. alur:
+             - pegawai mengajukan cuti
+               -upload surat permohonan
+               -upload surat keterangan dokter/rumah sakit
+             - atasan menyetujui cuti
+             - pegawai mendapatkan notifikasi cuti disetujui
+             - pegawai mendapatkan notifikasi cuti ditolak
+             - pegawai mendapatkan notifikasi cuti dibatalkan
+        c. Cuti Sakit:
+            *ada bebepa kategori sakit:
+            - sakit kurang dari 1-2 hari:
+              * alur:
+                - pegawai mengajukan cuti
+                - atasan menyetujui cuti
+                - pegawai mendapatkan notifikasi cuti disetujui
+                - pegawai mendapatkan notifikasi cuti ditolak
+                - pegawai mendapatkan notifikasi cuti dibatalkan
+            - sakit 2-7 hari:
+              * alur:
+                - pegawai mengajukan cuti   
+                  - upload surat keterangan dokter/rumah sakit
+                - atasan menyetujui cuti
+                - pegawai mendapatkan notifikasi cuti disetujui
+                - pegawai mendapatkan notifikasi cuti ditolak
+                - pegawai mendapatkan notifikasi cuti dibatalkan
+            - sakit lebih dari 7 hari:
+              * alur:
+                - pegawai mengajukan cuti
+                  - upload surat keterangan dokter/rumah sakit
+                - atasan menyetujui cuti
+                - pegawai mendapatkan notifikasi cuti disetujui
+                - pegawai mendapatkan notifikasi cuti ditolak
+                - pegawai mendapatkan notifikasi cuti dibatalkan    
+    3. Laporan Kinerja Harian:
+       a. alur:
+          - pegawai melaporkan kinerja harian
+          - atasan menyetujui laporan kinerja harian
+          - pegawai mendapatkan notifikasi laporan kinerja harian disetujui
+          - pegawai mendapatkan notifikasi laporan kinerja harian ditolak
+          - pegawai mendapatkan notifikasi laporan kinerja harian dibatalkan
+    4. melengkapi biodata:
+       a. alur:
+          - pegawai melengkapi biodata
+          - pegawai mendapatkan notifikasi biodata disetujui admin dinas
+    5. pegawai mendapatkan notifikasi:
+       - pengumuman
+       - kenaikan gaji berkala
+       - peringantan
+    6. Pegwai dapat melihat:
+       - pimpinan -> dinas -> unit kerja -> pegawai
+       - rekap absensi pribadi
+       - laporan kinerja harian:
+         - disetujui
+         - direvisi
+         - ditolak
+         - daftar pegawai satu unit kerja
+    7. pegawai dapat mengedit:
+       - password
+    8. pegawai dapat mereview kinerja teman satu unit kerja
+--mobile app atasan:
+    1. melihat kehadiran bawahan
+    2. menyetujui cuti bawahan
+    3. menolak cuti bawahan
+    4. membatalkan cuti bawahan
+    5. menyetujui laporan kinerja harian bawahan
+    6. menolak laporan kinerja harian bawahan
+    7. membatalkan laporan kinerja harian bawahan
+    8. melihat rekap absensi bawahan
+    9. meyetujui Dinas Luar
+    10. menolak Dinas Luar
+    11. membatalkan Dinas Luar
+    12. melihat rekap Dinas Luar
+    13. melihat rekap cuti bawahan
+    14. melihat rekap laporan kinerja harian bawahan
+    15. melihat rekap absensi bawahan
+    16. melihat rekap Dinas Luar
+    17. melihat rekap cuti bawahan
+    18. melihat rekap laporan kinerja harian bawahan
+    19. melihat rekap absensi bawahan
+    20. membuat laporan tentang pegawai ke dinas pendidikan
+    21. memantau lokasi pegawai yang sedang dinas luar
+--dashboard admin dinas:
+    1. memantau lokasi pegawai yang sedang dinas luar
+    2. menyetujui pengajuan biodata
+    3. membuat pengumuman
+    4. melihat data pegawai
+       a. sedang cuti
+       b. sedang dinas luar
+       c. sedang sakit
+       d. sedang bekerja
+    5. melihat rekap absensi pegawai
+    6. melihat rekap cuti pegawai
+    7. melihat rekap laporan kinerja harian pegawai
+    8. melihat rekap Dinas Luar
+    9. melihat pegawai yang sering terlambat,jarang masuk
+--dashboard admin unit kerja:
+    1. melakukan sinkronisasi data pegawai dengan dapodik
+    2. melihat data pegawai
+    3. memantau lokasi pegawai yang sedang dinas luar
+    4. menyetujui pengajuan biodata
+    5. melihat data pegawai
+       a. sedang cuti
+       b. sedang dinas luar
+       c. sedang sakit
+       d. sedang bekerja
+    6. melihat rekap absensi pegawai
+    7. melihat rekap cuti pegawai
+    8. melihat rekap laporan kinerja harian pegawai
+    9. melihat rekap Dinas Luar
+    10. membuat laporan tentang pegawai ke dinas pendidikan
