@@ -388,6 +388,14 @@ erDiagram
     pegawai ||--o{ log_lokasi_pegawai : dilacak
 ```
 
+### 5.1.1 Pendekatan Inisiasi Data Sistem (*Database Seeding*)
+
+> **Catatan Penting:** MAHESA didesain sebagai sistem tunggal (Satu Instalasi untuk Satu Instansi Dinas). Hal ini menyelesaikan _Chicken and Egg Problem_ terkait siapa yang berwenang pertama kali membuat admin.
+>
+> **Skenario *Genesis***: Data `dinas` pertama kali (*instance* instansi tunggal) beserta **satu** akun `pegawai` + `pengguna` yang menjabat sebagai `super_admin` (*Genesis Admin*) **TIDAK DIBUAT melalui *Web Dashboard***. Melainkan disuntikkan secara aman secara *hardcode* (*Database Seeder* atau CLI Sistem) saat proses _deployment_ aplikasi ke server untuk pertama kalinya oleh Tim IT Developer. Setelah *Genesis Admin* berhasil masuk, dia akan memiliki *Full Access* Web UI untuk menambahkan cabang, sekolah, dan staf lainnya secara terstruktur.
+
+---
+
 ### 5.2 Skema Tabel Detail
 
 ---
