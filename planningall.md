@@ -413,6 +413,24 @@ CREATE TABLE dinas (
 
 ---
 
+#### 📌 `akses_admin_dinas` — Multi Admin/Super Admin Dinas (Relasi Tingkat 1)
+
+> Dibuat untuk memecah akses *Super Admin*. Memungkinkan kita memiliki lebih dari satu pengelola tingkat Kabupaten/Kota dengan peran spesifik.
+
+```sql
+CREATE TABLE akses_admin_dinas (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_dinas            UUID NOT NULL REFERENCES dinas(id) ON DELETE CASCADE,
+    id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    peran               VARCHAR(50) NOT NULL DEFAULT 'super_admin', -- super_admin, auditor, operator_biodata
+    diberikan_oleh      UUID REFERENCES pegawai(id),
+    aktif               BOOLEAN NOT NULL DEFAULT true,
+    dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
 #### 📌 `skema_jam_kerja` — Master Skema Jam Kerja Pegaawai
 
 > Dikelola oleh Admin Dinas untuk menentukan jadwal operasional kerja, misal "5 Hari Kerja" atau "6 Hari Kerja".
@@ -528,6 +546,11 @@ CREATE TABLE pengguna (
     peran               VARCHAR(30) NOT NULL DEFAULT 'pegawai',
     -- Nilai: admin_dinas, admin_upt, admin_unit, pimpinan_unit_kerja, pegawai
     aktif               BOOLEAN NOT NULL DEFAULT true,
+    
+    -- Lapisan Keamanan Tambahan
+    mfa_aktif           BOOLEAN NOT NULL DEFAULT false,  -- Multi-Factor Authentication (Wajib bagi Admin Dinas)
+    mfa_secret          VARCHAR(255),                    -- Kunci Rahasia untuk Google Authenticator / Authy
+    
     terakhir_login      TIMESTAMPTZ,
     token_fcm           VARCHAR(500),                    -- Firebase Cloud Messaging token
     dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
