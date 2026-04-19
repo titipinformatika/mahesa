@@ -440,13 +440,17 @@ CREATE TABLE skema_jam_kerja (
 ```sql
 CREATE TABLE unit_kerja (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sekolah_id_dapodik      UUID UNIQUE,                     -- ID asli referensi sekolah dari Dapodik (Untuk Unit Level 3)
-    bentuk_pendidikan       VARCHAR(50),                     -- Contoh: SD, SMP, SMA (Dari Dapodik)
-    status_sekolah          VARCHAR(50),                     -- Contoh: Negeri, Swasta (Dari Dapodik)
+    
+    -- Field Khusus Sekolah (Bisa NULL jika bentuknya Kantor/UPT)
+    sekolah_id_dapodik      UUID UNIQUE,                     -- NULLABLE. Hanya terisi jika Unit Level 3 (Sinkronisasi Dapodik)
+    bentuk_pendidikan       VARCHAR(50),                     -- NULLABLE. SD, SMP, SMA, dsb (Dari Dapodik)
+    status_sekolah          VARCHAR(50),                     -- NULLABLE. Negeri / Swasta (Dari Dapodik)
+    npsn                    VARCHAR(20) UNIQUE,              -- NULLABLE. Nomor Pokok Sekolah Nasional (Dari Dapodik)
+    
+    -- Field Umum (Untuk Semua Unit Kerja)
     id_dinas                UUID NOT NULL REFERENCES dinas(id),
     id_induk_unit           UUID REFERENCES unit_kerja(id),  -- FK ke UPT (Level 2) jika unit ini adalah Level 3
     level_unit              INTEGER NOT NULL,                -- 2 = UPT, 3 = Sekolah
-    npsn                    VARCHAR(20) UNIQUE,              -- Nomor Pokok Sekolah Nasional
     nama                    VARCHAR(255) NOT NULL,           -- "SDN 1 Contoh"
     kode                    VARCHAR(30) UNIQUE NOT NULL,
     jenis                   VARCHAR(50) NOT NULL,            -- sd, smp, sma, smk, upt, kantor
