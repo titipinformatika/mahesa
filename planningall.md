@@ -591,24 +591,13 @@ CREATE TABLE pegawai (
     alamat                  TEXT,
     url_foto                VARCHAR(500),
 
-    -- Kepegawaian & Dapodik (Terintegrasi)
-    ptk_id                  UUID UNIQUE,                      -- ID khusus milik Dapodik
-    nama_jabatan            VARCHAR(100),                     -- "Guru Kelas", "Staf TU", "Kepala Sekolah"
-    golongan                VARCHAR(10),                      -- "III/a", "IV/b" dll
-    jenis_kepegawaian       VARCHAR(30) NOT NULL,             -- pns, pppk, honorer, kontrak
     
-    -- Field Kepangkatan & Kepegawaian (Dapodik Sinkronisasi)
-    sk_cpns                 VARCHAR(100),
-    tmt_cpns                DATE,
-    sk_pengangkatan         VARCHAR(100),
-    tmt_pengangkatan        DATE,
-    lembaga_pengangkatan    VARCHAR(100),
-    pangkat_golongan_id     VARCHAR(20),                      -- Referensi ID Dapodik
-    status_kepegawaian_id_str VARCHAR(100),                   -- Referensi ID Dapodik
-    jenis_ptk_id_str        VARCHAR(100),                     -- Referensi ID Dapodik
-
+    -- ID Rekam Jejak Sync (Untuk mengetahui pegawai ini nyambung ke mana)
+    ptk_id                  UUID UNIQUE,                      -- Jika tersinkronisasi dari Dapodik
+    id_simpeg               VARCHAR(100) UNIQUE,              -- Jika tersinkronisasi dari SIMPEG
+    
+    -- Tanggal mulai bergabung
     tanggal_masuk           DATE NOT NULL,
-    tanggal_keluar          DATE,
 
     -- Keuangan
     nama_bank               VARCHAR(100),
@@ -630,10 +619,81 @@ CREATE TABLE pegawai (
     diperbarui_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- FK back-reference untuk unit_kerja.id_kepala_unit
-ALTER TABLE unit_kerja
-    ADD CONSTRAINT fk_kepala_unit
-    FOREIGN KEY (id_kepala_unit) REFERENCES pegawai(id) ON DELETE SET NULL;
+```
+
+```
+
+---
+
+#### 📌 `jabatan_pegawai` — Riwayat Karir & Pangkat (Histori Kepegawaian)
+
+> Termasuk data yang ditarik dari SIMPEG dan Dapodik (TMT, SK, Golongan) terakumulasi di sini.
+
+```sql
+CREATE TABLE jabatan_pegawai (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_pegawai              UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    id_unit_kerja           UUID NOT NULL REFERENCES unit_kerja(id),
+    
+    jenis_kepegawaian       VARCHAR(30) NOT NULL,             -- pns, pppk, honorer, tenaga_kontrak
+    nama_jabatan            VARCHAR(100) NOT NULL,            -- "Guru Madya", "Staf TU Daerah"
+    pangkat_golongan        VARCHAR(20),                      -- "III/a", "IV/b"
+    eselon                  VARCHAR(10),                      -- "Eselon III.a"
+    
+    -- Data Legal formal (Ditarik otomatis jika sinkron SIMPEG/Dapodik)
+    nomor_sk                VARCHAR(100),
+    tanggal_sk              DATE,
+    tmt_jabatan             DATE NOT NULL,                    -- Terhitung Mulai Tanggal
+    lembaga_pengangkat      VARCHAR(100),
+    
+    is_aktif                BOOLEAN NOT NULL DEFAULT true,    -- Jabatan yang sedang berjalan sekarang
+    sumber_data             VARCHAR(30) NOT NULL DEFAULT 'manual', -- manual, dapodik, simpeg
+    dibuat_pada             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+#### 📌 `pendidikan_pegawai` — Riwayat Pendidikan
+
+```sql
+CREATE TABLE pendidikan_pegawai (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_pegawai              UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    
+    jenjang                 VARCHAR(20) NOT NULL,             -- SD, SMP, SMA, D3, S1, S2, S3
+    nama_institusi          VARCHAR(255) NOT NULL,            -- "Universitas Pendidikan Indonesia"
+    fakultas                VARCHAR(100),
+    jurusan                 VARCHAR(100),
+    tahun_lulus             INTEGER NOT NULL,
+    gelar                   VARCHAR(20),                      -- "S.Pd.", "M.M."
+    
+    sumber_data             VARCHAR(30) NOT NULL DEFAULT 'manual', -- manual, dapodik, simpeg
+    dibuat_pada             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+#### 📌 `keluarga_pegawai` — Data Tanggungan Keluarga
+
+```sql
+CREATE TABLE keluarga_pegawai (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_pegawai              UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    
+    nama_lengkap            VARCHAR(255) NOT NULL,
+    nik                     VARCHAR(16) UNIQUE,
+    hubungan                VARCHAR(30) NOT NULL,             -- suami, istri, anak_kandung, anak_angkat
+    tempat_lahir            VARCHAR(100),
+    tanggal_lahir           DATE,
+    jenis_kelamin           VARCHAR(20),
+    pekerjaan               VARCHAR(100),
+    status_tunjangan        BOOLEAN NOT NULL DEFAULT false,   -- Apakah masuk dalam tunjangan gaji
+    
+    sumber_data             VARCHAR(30) NOT NULL DEFAULT 'manual', -- manual, dapodik, simpeg
+    dibuat_pada             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
 
 ---
