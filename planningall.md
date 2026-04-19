@@ -472,14 +472,47 @@ CREATE TABLE unit_kerja (
     alamat                  TEXT,
     telepon                 VARCHAR(20),
     email                   VARCHAR(255),
-    id_kepala_unit          UUID,                            -- FK ke pegawai (Pucuk Pimpinan)
-    id_admin_unit           UUID,                            -- FK ke pegawai (Operator/Admin wilayah/sekolah tsb)
+    -- id_kepala_unit: dihapus, diganti tabel relasi pejabat_unit_kerja
+    -- id_admin_unit: dihapus, diganti tabel relasi akses_admin_unit
     latitude                DECIMAL(10,7) NOT NULL,          -- Koordinat pusat untuk validasi absensi
     longitude               DECIMAL(10,7) NOT NULL,
     radius_absensi_meter    INTEGER NOT NULL DEFAULT 100,    -- Radius absensi kantor (meter)
     aktif                   BOOLEAN NOT NULL DEFAULT true,
     dibuat_pada             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diperbarui_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+#### 📌 `pejabat_unit_kerja` — Multi Pimpinan/Wakil (Relasi)
+
+```sql
+CREATE TABLE pejabat_unit_kerja (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_unit_kerja       UUID NOT NULL REFERENCES unit_kerja(id) ON DELETE CASCADE,
+    id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    jabatan             VARCHAR(50) NOT NULL,            -- kepala_definitif, plt, wakil_kepala
+    tanggal_mulai       DATE NOT NULL,
+    tanggal_selesai     DATE,                            -- Jika null berarti masih menjabat
+    aktif               BOOLEAN NOT NULL DEFAULT true,
+    dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+#### 📌 `akses_admin_unit` — Multi Admin/Operator (Relasi)
+
+```sql
+CREATE TABLE akses_admin_unit (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_unit_kerja       UUID NOT NULL REFERENCES unit_kerja(id) ON DELETE CASCADE,
+    id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
+    peran               VARCHAR(50) NOT NULL DEFAULT 'admin_unit', -- admin_unit, operator_absensi
+    diberikan_oleh      UUID REFERENCES pegawai(id),
+    aktif               BOOLEAN NOT NULL DEFAULT true,
+    dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
