@@ -187,6 +187,23 @@ Dinas Pendidikan (Level 1 - Induk)
 | **`connectivity_plus`** | Network detection | Deteksi online/offline |
 | **`mockito`** | Test mocking | Unit test & widget test |
 
+### 2.4 Alternatif Berbayar (Enterprise / Premium)
+
+Sebagai perbandingan, berikut adalah daftar teknologi versi berbayar beserta kelebihan dan kekurangannya jika dibandingkan dengan versi gratis yang direkomendasikan di atas. Instansi dapat mempertimbangkan opsi ini jika memiliki anggaran khusus (APBD/APBN) dan membutuhkan skalabilitas atau SLA (Service Level Agreement) terjamin.
+
+| Kategori | Teknologi Berbayar | Kelebihan (vs Gratis) | Kekurangan (vs Gratis) |
+|----------|--------------------|-----------------------|------------------------|
+| **Database & BaaS** | **Supabase Pro / Firebase Blaze / AWS RDS** | Dikelola penuh (Managed), auto-scaling, backup otomatis, uptime SLA terjamin, setup lebih instan tanpa perlu config server sendiri. | Terkena *vendor lock-in*, biaya akan membengkak (*pay-as-you-go*) seiring dengan pertumbuhan data dan traffic pengguna. |
+| **Server & Deployment** | **Vercel Pro / Railway / GCP (VM Berbayar)** | CI/CD instan, edge CDN, infrastruktur lebih stabil (jika traffic sangat tinggi), terhindar dari keterbatasan tier gratis. | Biaya bulanan (mulai dari ~$20+/bulan) ditambah biaya pemakaian trafik & komputasi. |
+| **Peta & Pelacakan Lokasi** | **Google Maps API / Mapbox Enterprise** | Peta jauh lebih tajam, akurasi *geocoding* tiada tanding, integrasi dan render di perangkat *mobile* sangat mulus. | Berbayar per *API request*. Jika ada ribuan absensi & update lokasi tiap hari, tagihan API bisa sangat besar. |
+| **Push Notification & SMS** | **OneSignal Premium / Twilio (WhatsApp/SMS)** | Memiliki analitik mendalam, *delivery rate* tinggi, opsi *fallback* (kirim WA/SMS jika Push gagal). | Langganan mahal berdasarkan jumlah pengguna aktif bulanan atau biaya per pesan (*pay-per-message*). |
+| **UI Components (Web)** | **Tailwind UI / MUI X Premium** | Desain premium, komponen enterprise siap pakai (layaknya Data Grid pro dengan *advanced filter/export* bawaan). | Biaya lisensi per developer (*one-time* atau *subscription*) yang relatif mahal (bisa rata-rata > $300-$1000). |
+| **Penyimpanan Berkas** | **AWS S3 / Google Cloud Storage** | Skalabilitas tinggi kapasitas petabyte, *multi-region redundancy*, durabilitas file 99.999% (*eleven nines*). | Tagihan variabel per bulan dihitung dari kapasitas yang dipakai, jumlah *request* (GET/PUT), dan *bandwidth* data keluar (egress). |
+
+**Kesimpulan Pemilihan:**
+- Pertahankan penggunaan **opsi GRATIS (seperti stack saat ini)** untuk menekan budget infrastruktur secara maksimal. Kombinasi *self-hosted* pada *virtual machine* atau aset *on-premise* yang sudah dimiliki instansi sudah jauh lebih dari cukup dan kuat untuk skala satu wilayah.
+- Gunakan **opsi BERBAYAR** **hanya jika** instansi tidak memiliki staf TI (DevOps/SysAdmin) internal yang mumpuni untuk *maintenance* server mandiri, atau ada dana sisa operasional untuk membiayai kemudahan *manage services* (terima bersih dengan jaminan ketersediaan).
+
 ---
 
 ## 3. Arsitektur Sistem
@@ -334,6 +351,7 @@ HTTP Request
 |-----------|:-----------:|:---------:|:----------:|:-------------------:|:-------:|
 | **Pengaturan Sistem (Master Data)** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Kelola Skema Jam Kerja**| ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Kelola Master Jenis Kepegawaian**| ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Kelola Semua Peran Akun** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Lihat Semua Unit Kerja (Global)**| ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Lihat Unit Kerja Bawahan (Wilayah UPT)**| ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -366,6 +384,7 @@ erDiagram
     pengguna ||--o| pegawai : memiliki
     pegawai }o--|| unit_kerja : bertugas_di
     unit_kerja }o--|| dinas : dibawah
+    master_jenis_kepegawaian ||--o{ jabatan_pegawai : mengkategorikan
     pegawai ||--o{ absensi : mencatat
     pegawai ||--o{ titik_absensi : memiliki
     pegawai ||--o{ pengajuan_dinas_luar : mengajukan
@@ -625,6 +644,26 @@ CREATE TABLE pegawai (
 
 ---
 
+#### 📌 `master_jenis_kepegawaian` — Master Jenis & Hak Akses Pegawai
+
+> Dikelola oleh Admin Dinas. Menentukan apakah jenis pegawai tertentu (misal: "Honorer") wajib melakukan absen, boleh cuti, dsb.
+
+```sql
+CREATE TABLE master_jenis_kepegawaian (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nama                VARCHAR(100) UNIQUE NOT NULL,    -- "PNS", "PPPK", "Honorer Daerah", "Magang"
+    wajib_absen         BOOLEAN NOT NULL DEFAULT true,   -- Apakah diwajibkan melakukan absen harian
+    hak_cuti            BOOLEAN NOT NULL DEFAULT true,   -- Apakah berhak mengajukan cuti
+    hak_dinas_luar      BOOLEAN NOT NULL DEFAULT true,   -- Apakah berhak diajukan/mengajukan Dinas Luar
+    hak_lhkp            BOOLEAN NOT NULL DEFAULT true,   -- Apakah diwajibkan mengisi Laporan Kinerja Harian
+    aktif               BOOLEAN NOT NULL DEFAULT true,
+    dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diperbarui_pada     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
 #### 📌 `jabatan_pegawai` — Riwayat Karir & Pangkat (Histori Kepegawaian)
 
 > Termasuk data yang ditarik dari SIMPEG dan Dapodik (TMT, SK, Golongan) terakumulasi di sini.
@@ -635,7 +674,7 @@ CREATE TABLE jabatan_pegawai (
     id_pegawai              UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
     id_unit_kerja           UUID NOT NULL REFERENCES unit_kerja(id),
     
-    jenis_kepegawaian       VARCHAR(30) NOT NULL,             -- pns, pppk, honorer, tenaga_kontrak
+    id_jenis_kepegawaian    UUID NOT NULL REFERENCES master_jenis_kepegawaian(id), -- Menggantikan teks statis pns/pppk
     nama_jabatan            VARCHAR(100) NOT NULL,            -- "Guru Madya", "Staf TU Daerah"
     pangkat_golongan        VARCHAR(20),                      -- "III/a", "IV/b"
     eselon                  VARCHAR(10),                      -- "Eselon III.a"
@@ -1264,7 +1303,7 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 | 5 | **Ajukan Cuti Sakit** | Auto-detect kategori berdasar durasi: (1-2 hari tanpa dokumen), (2-7 hari + surat dokter), (>7 hari + surat dokter) → approval → notifikasi. |
 | 6 | **Laporan Kinerja Harian** | Submit laporan harian (isi kegiatan) → approval atasan → notifikasi hasil (disetujui/direvisi/ditolak). |
 | 7 | **Melengkapi Biodata** | Form update profil lengkap → submit ke admin → notifikasi approval. |
-| 8 | **Terima Notifikasi** | Push notification: pengumuman, kenaikan gaji berkala, peringatan, hasil approval cuti/DL/kinerja. |
+| 8 | **Terima Notifikasi** | Push notification: pengumuman, kenaikan gaji berkala, peringatan, hasil approval, **serta pengingat otomatis (auto-reminder) absen pulang dan tiap checkpoint DL agar tidak lupa**. |
 | 9 | **Lihat Struktur Organisasi** | View hierarki: Pimpinan → Dinas → Unit Kerja → Pegawai. |
 | 10 | **Lihat Rekap Absensi Pribadi** | Calendar + list view absensi bulanan. Statistik hadir/terlambat/absen. |
 | 11 | **Lihat Laporan Kinerja** | Tab: Disetujui, Direvisi, Ditolak. |
@@ -1301,6 +1340,7 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 | 7 | **Rekap Kinerja Harian** | Statistik laporan kinerja per unit, per pegawai. |
 | 8 | **Rekap Dinas Luar** | Semua data DL, filter per unit/pegawai/bulan. |
 | 9 | **Pegawai Bermasalah** | Sorot pegawai yang sering terlambat, jarang masuk. Dapat diurutkan & difilter. |
+| 10 | **Pengaturan Audio Notifikasi** | Konfigurasi nada dering/suara kustom secara global untuk push notification (contoh: suara pengingat absen berbeda dengan notifikasi pengumuman biasa). Terekam dalam opsi pengaturan sistem. |
 
 ### 6.4 🖥️ Web Dashboard — Admin Unit Kerja
 
@@ -1358,6 +1398,11 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 
 --- Sore hari ---
 
+                                                   ┌───────────────────────────────────┐
+                                                   │ Push Notif (Auto-Reminder)        │
+                                                   │ "Waktunya absen pulang!"          │
+                                                   └────────┬──────────────────────────┘
+                                                            ▼
 ┌──────────────────┐     ┌───────────────────┐     ┌───────────────────┐
 │ Klik "Pulang"    │────▶│ GPS + Selfie      │────▶│ Simpan Titik      │
 │                  │     │ + Validasi Radius  │     │ "jam_pulang"      │
@@ -1372,6 +1417,7 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 [Berangkat dari mana saja]  →  [Sampai Lokasi DL]  →  [Pulang dari mana saja]
      GPS: dimana saja            GPS: radius DL          GPS: dimana saja
      Selfie: ✅                  Selfie: ✅              Selfie: ✅
+     ✨ Auto Remind: Berangkat   ✨ Auto Remind: Sampai  ✨ Auto Remind: Pulang
 ```
 
 #### Skema 2: Masuk Kerja → Dinas Luar → Pulang
@@ -1379,6 +1425,7 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 [Masuk Kerja di Kantor]  →  [Sampai Lokasi DL]  →  [Pulang dari mana saja]
      GPS: radius kantor        GPS: radius DL         GPS: dimana saja
      Selfie: ✅               Selfie: ✅             Selfie: ✅
+     ✨ Auto Remind: Masuk       ✨ Auto Remind: Sampai ✨ Auto Remind: Pulang
 ```
 
 #### Skema 3: Dinas Luar → Masuk Kerja
@@ -1386,6 +1433,7 @@ CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 [Berangkat mana saja]  →  [Sampai Lokasi DL]  →  [Sampai Kantor]  →  [Pulang Kantor]
      GPS: dimana saja        GPS: radius DL         GPS: radius kantor   GPS: radius kantor
      Selfie: ✅             Selfie: ✅             Selfie: ✅           Selfie: ✅
+     ✨ Remind: Berangkat    ✨ Remind: Sampai      ✨ Remind: Masuk     ✨ Remind: Pulang
 ```
 
 #### Alur Pengajuan & Persetujuan DL
