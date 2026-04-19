@@ -422,7 +422,7 @@ CREATE TABLE akses_admin_dinas (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_dinas            UUID NOT NULL REFERENCES dinas(id) ON DELETE CASCADE,
     id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
-    peran               VARCHAR(50) NOT NULL DEFAULT 'super_admin', -- super_admin, auditor, operator_biodata
+    peran               ENUM('super_admin', 'auditor', 'operator_biodata') NOT NULL DEFAULT 'super_admin',
     diberikan_oleh      UUID REFERENCES pegawai(id),
     aktif               BOOLEAN NOT NULL DEFAULT true,
     dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -510,7 +510,7 @@ CREATE TABLE pejabat_unit_kerja (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_unit_kerja       UUID NOT NULL REFERENCES unit_kerja(id) ON DELETE CASCADE,
     id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
-    jabatan             VARCHAR(50) NOT NULL,            -- kepala_definitif, plt, wakil_kepala
+    jabatan             ENUM('kepala_definitif', 'plt', 'wakil_kepala') NOT NULL,
     tanggal_mulai       DATE NOT NULL,
     tanggal_selesai     DATE,                            -- Jika null berarti masih menjabat
     aktif               BOOLEAN NOT NULL DEFAULT true,
@@ -527,7 +527,7 @@ CREATE TABLE akses_admin_unit (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_unit_kerja       UUID NOT NULL REFERENCES unit_kerja(id) ON DELETE CASCADE,
     id_pegawai          UUID NOT NULL REFERENCES pegawai(id) ON DELETE CASCADE,
-    peran               VARCHAR(50) NOT NULL DEFAULT 'admin_unit', -- admin_unit, operator_absensi
+    peran               ENUM('admin_unit', 'operator_absensi') NOT NULL DEFAULT 'admin_unit',
     diberikan_oleh      UUID REFERENCES pegawai(id),
     aktif               BOOLEAN NOT NULL DEFAULT true,
     dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW()
