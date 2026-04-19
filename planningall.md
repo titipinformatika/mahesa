@@ -440,6 +440,9 @@ CREATE TABLE skema_jam_kerja (
 ```sql
 CREATE TABLE unit_kerja (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sekolah_id_dapodik      UUID UNIQUE,                     -- ID asli referensi sekolah dari Dapodik (Untuk Unit Level 3)
+    bentuk_pendidikan       VARCHAR(50),                     -- Contoh: SD, SMP, SMA (Dari Dapodik)
+    status_sekolah          VARCHAR(50),                     -- Contoh: Negeri, Swasta (Dari Dapodik)
     id_dinas                UUID NOT NULL REFERENCES dinas(id),
     id_induk_unit           UUID REFERENCES unit_kerja(id),  -- FK ke UPT (Level 2) jika unit ini adalah Level 3
     level_unit              INTEGER NOT NULL,                -- 2 = UPT, 3 = Sekolah
@@ -505,10 +508,22 @@ CREATE TABLE pegawai (
     alamat                  TEXT,
     url_foto                VARCHAR(500),
 
-    -- Kepegawaian
+    -- Kepegawaian & Dapodik (Terintegrasi)
+    ptk_id                  UUID UNIQUE,                      -- ID khusus milik Dapodik
     nama_jabatan            VARCHAR(100),                     -- "Guru Kelas", "Staf TU", "Kepala Sekolah"
     golongan                VARCHAR(10),                      -- "III/a", "IV/b" dll
     jenis_kepegawaian       VARCHAR(30) NOT NULL,             -- pns, pppk, honorer, kontrak
+    
+    -- Field Kepangkatan & Kepegawaian (Dapodik Sinkronisasi)
+    sk_cpns                 VARCHAR(100),
+    tmt_cpns                DATE,
+    sk_pengangkatan         VARCHAR(100),
+    tmt_pengangkatan        DATE,
+    lembaga_pengangkatan    VARCHAR(100),
+    pangkat_golongan_id     VARCHAR(20),                      -- Referensi ID Dapodik
+    status_kepegawaian_id_str VARCHAR(100),                   -- Referensi ID Dapodik
+    jenis_ptk_id_str        VARCHAR(100),                     -- Referensi ID Dapodik
+
     tanggal_masuk           DATE NOT NULL,
     tanggal_keluar          DATE,
 
