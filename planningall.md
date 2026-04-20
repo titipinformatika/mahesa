@@ -68,7 +68,7 @@ Dinas Pendidikan (Level 1 - Induk)
 |------|----------|-----------|
 | **Pegawai** | 📱 Mobile App | Absensi, cuti, laporan kinerja harian, biodata, peer review |
 | **Pimpinan Unit Kerja** (Kepala Sekolah/UPT) | 📱 Mobile App | Approval cuti/DL/kinerja, monitoring bawahan, live tracking DL |
-| **Admin Unit Kerja** | 🖥️ Web Dashboard | Kelola pegawai unit, sync Dapodik, rekap, laporan ke Dinas |
+| **Admin Unit Kerja** | 🖥️ Web Dashboard + 🔧 MAHESA Sync Tool | Kelola pegawai unit, rekap, laporan ke Dinas. Sync Dapodik via tool khusus lokal. |
 | **Admin UPT** | 🖥️ Web Dashboard | Kepanjangan tangan Dinas, rekap sekolah di wilayahnya (Level 3), pantau kehadiran/DL satu UPT |
 | **Admin Dinas** | 🖥️ Web Dashboard | Monitoring seluruh unit, approval biodata, pengumuman, rekap |
 
@@ -95,6 +95,7 @@ Dinas Pendidikan (Level 1 - Induk)
 | **Pemantauan & Logging** | GlitchTip + Grafana + Loki (self-host) | 🆓 Gratis |
 | **CI/CD** | GitHub Actions / Gitea + Woodpecker CI | 🆓 Gratis |
 | **Distribusi Mobile** | APK langsung / F-Droid | 🆓 Gratis |
+| **MAHESA Sync Tool** | Bun (single binary) + `node-fetch` | 🆓 Gratis — Tool CLI/Tray ringan (~5-10MB), hanya untuk sync Dapodik |
 
 ### 2.1 Backend
 
@@ -187,7 +188,83 @@ Dinas Pendidikan (Level 1 - Induk)
 | **`connectivity_plus`** | Network detection | Deteksi online/offline |
 | **`mockito`** | Test mocking | Unit test & widget test |
 
-### 2.4 Alternatif Berbayar (Enterprise / Premium)
+### 2.4 MAHESA Sync Tool (Dapodik Agent — Khusus Admin Unit Kerja)
+
+> [!IMPORTANT]
+> **Keputusan Arsitektur (Rencana A):** Admin Unit Kerja tetap menggunakan **Web Dashboard** untuk seluruh fitur manajemen. Namun untuk kebutuhan **Sinkronisasi Dapodik** yang memerlukan akses ke aplikasi Dapodik Desktop lokal (`localhost:5774`), disediakan **MAHESA Sync Tool** — sebuah aplikasi CLI/System Tray kecil dan ringan yang diinstal sekali di komputer sekolah.
+
+#### Alasan Pemilihan Rencana A (Web + Sync Tool)
+
+| Aspek | Web Dashboard + Sync Tool (Rencana A) | Flutter Desktop Penuh (Rencana B) |
+|-------|--------------------------------------|-----------------------------------|
+| **Distribusi & Update** | Web: otomatis. Tool: self-update ringan | Harus install ulang di setiap komputer |
+| **Ukuran instalasi** | Tool kecil ~5-10 MB | ~50-100 MB per installer |
+| **Akses dari mana saja** | Bisa dari browser manapun | Hanya di komputer terinstall |
+| **Beban development** | Satu codebase web untuk semua admin | Dua codebase: web + desktop |
+| **Fitur Dapodik Sync** | ✅ Via tool lokal | ✅ Native |
+| **Rekomendasi** | ✅ **Dipilih** | ❌ Terlalu berat untuk manfaatnya |
+
+#### Spesifikasi MAHESA Sync Tool
+
+| Komponen | Teknologi | Keterangan |
+|----------|-----------|------------|
+| **Runtime** | Bun | Compile menjadi single `.exe` / binary (tidak butuh install Node/Bun di komputer sekolah) |
+| **HTTP Client** | `node-fetch` / Bun native `fetch` | Akses `localhost:5774` langsung (bebas CORS, bukan browser) |
+| **Cookie Management** | Manual cookie store (seperti `syncService.js` lama) | Login 3 tahap ke Dapodik Desktop |
+| **UI** | CLI (Terminal) / System Tray opsional | Minimalis, ringan, tidak butuh GUI kompleks |
+| **Enkripsi Kredensial** | AES-256 via `crypto` (built-in Bun) | Username + password Dapodik tidak disimpan plaintext |
+| **Distribusi** | `.exe` (Windows) / `.sh` (Linux) | Download dari halaman Web Dashboard MAHESA |
+| **Auto-update** | Cek versi dari MAHESA API saat startup | Self-update tanpa intervensi IT |
+
+#### Alur Kerja Sync Tool
+
+```
+Admin Unit buka Web Dashboard → Tab "Dapodik"
+    ↓
+Jika belum ada Sync Tool → Tampilkan instruksi download
+Admin download MAHESA_Sync_Tool.exe dari dashboard
+Instal & jalankan (sekali saja, bisa dijadikan startup)
+    ↓
+Sync Tool berjalan di background (system tray / service)
+    ↓
+Admin klik "Sinkronisasi Sekarang" di Web Dashboard
+    → Web Dashboard POST ke MAHESA Cloud API:
+      { action: 'trigger_sync', unit_id: '...' }
+    → Cloud API buat "sync job" dengan status: menunggu_agen
+    ↓
+Sync Tool (polling MAHESA API setiap 30 detik):
+    → GET /v1/dapodik/job-sinkronisasi?unit_id=xxx
+    → Ada job? → Jalankan proses sync lokal:
+        [1] Login 3 tahap ke localhost:5774
+        [2] Tarik data PTK (response.data.rows)
+        [3] POST hasil ke MAHESA Cloud API
+    → Update status job: selesai / gagal
+    ↓
+Web Dashboard menampilkan hasil sync (polling status)
+```
+
+#### Struktur Folder MAHESA Sync Tool
+
+```
+mahesa-sync-tool/
+├── src/
+│   ├── index.ts              # Entry point, polling loop
+│   ├── dapodik/
+│   │   ├── login.ts          # Login 3 tahap (adaptasi syncService.js)
+│   │   ├── fetcher.ts        # Tarik data PTK via cookie session
+│   │   └── mapper.ts         # Transformasi data Dapodik → format MAHESA
+│   ├── mahesa/
+│   │   └── api.ts            # Komunikasi dengan MAHESA Cloud API
+│   ├── config/
+│   │   └── credentials.ts    # Enkripsi/dekripsi kredensial lokal
+│   └── utils/
+│       └── logger.ts
+├── build.ts                  # Bun compile script → single binary
+├── package.json
+└── README.md
+```
+
+### 2.5 Alternatif Berbayar (Enterprise / Premium)
 
 Sebagai perbandingan, berikut adalah daftar teknologi versi berbayar beserta kelebihan dan kekurangannya jika dibandingkan dengan versi gratis yang direkomendasikan di atas. Instansi dapat mempertimbangkan opsi ini jika memiliki anggaran khusus (APBD/APBN) dan membutuhkan skalabilitas atau SLA (Service Level Agreement) terjamin.
 
@@ -1231,6 +1308,64 @@ CREATE TABLE log_audit (
 
 ---
 
+#### 📌 `riwayat_sinkronisasi_dapodik` — Log Riwayat Sinkronisasi Dapodik
+
+> Mencatat setiap sesi sinkronisasi yang dilakukan oleh Admin Unit. Digunakan untuk audit, debug, dan pratinjau perbedaan sebelum data diterapkan.
+
+```sql
+CREATE TABLE riwayat_sinkronisasi_dapodik (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_unit_kerja           UUID NOT NULL REFERENCES unit_kerja(id),
+    id_admin                UUID NOT NULL REFERENCES pengguna(id),      -- Admin yang menjalankan sync
+
+    -- Status Proses
+    status                  VARCHAR(30) NOT NULL DEFAULT 'berjalan',
+    -- Nilai: berjalan, selesai, gagal, dibatalkan
+    metode                  VARCHAR(20) NOT NULL DEFAULT 'otomatis',
+    -- Nilai: otomatis (SSO scraper), manual (upload file)
+
+    -- Kredensial SSO (Terenkripsi di level aplikasi, BUKAN plaintext)
+    username_dapodik        VARCHAR(255),                               -- Disimpan terenkripsi (AES-256)
+    -- (password tidak disimpan, hanya digunakan saat sesi berlangsung)
+
+    -- Statistik Hasil
+    total_ptk_dapodik       INTEGER DEFAULT 0,                          -- Total PTK yang ditarik dari Dapodik
+    total_baru              INTEGER DEFAULT 0,                          -- Pegawai baru yang ditambahkan
+    total_diperbarui        INTEGER DEFAULT 0,                          -- Pegawai yang datanya diperbarui
+    total_konflik           INTEGER DEFAULT 0,                          -- Data yang di-skip karena konflik
+    total_gagal             INTEGER DEFAULT 0,                          -- Data yang gagal diproses
+
+    -- Detail Hasil (JSON)
+    ringkasan               JSONB,
+    -- Contoh: {"baru":[{ptk_id,nama}], "diperbarui":[...], "konflik":[{ptk_id,alasan}]}
+    pesan_error             TEXT,                                       -- Diisi jika status = gagal
+
+    dimulai_pada            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    selesai_pada            TIMESTAMPTZ
+);
+```
+
+---
+
+#### 📌 `kredensial_dapodik` — Kredensial SSO Dapodik per Unit Kerja
+
+> Menyimpan kredensial akun Dapodik Unit Kerja yang digunakan oleh scraper SSO. Diinput satu kali oleh Admin Unit, dan dienkripsi sebelum disimpan ke database.
+
+```sql
+CREATE TABLE kredensial_dapodik (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_unit_kerja       UUID UNIQUE NOT NULL REFERENCES unit_kerja(id) ON DELETE CASCADE,
+    username            VARCHAR(255) NOT NULL,                          -- Username akun Dapodik
+    password_terenkripsi VARCHAR(500) NOT NULL,                         -- Password dienkripsi AES-256
+    terakhir_diverifikasi TIMESTAMPTZ,                                  -- Kapan terakhir login berhasil
+    aktif               BOOLEAN NOT NULL DEFAULT true,
+    dibuat_pada         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diperbarui_pada     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
 ### 5.3 Strategi Indexing
 
 ```sql
@@ -1814,10 +1949,120 @@ Pengembangan: http://localhost:3000/v1
 
 | Method | Endpoint | Deskripsi | Peran |
 |--------|----------|-----------|------|
-| `POST` | `/v1/dapodik/sinkronisasi` | Jalankan sinkronisasi data pegawai | Admin Unit |
-| `POST` | `/v1/dapodik/impor` | Impor manual file Dapodik | Admin Unit |
-| `GET` | `/v1/dapodik/riwayat-sinkronisasi` | Riwayat sinkronisasi | Admin Unit |
-| `GET` | `/v1/dapodik/perbedaan` | Pratinjau perbedaan data sebelum sync | Admin Unit |
+| `POST` | `/v1/dapodik/kredensial` | Simpan/update kredensial SSO Dapodik | Admin Unit |
+| `POST` | `/v1/dapodik/verifikasi-kredensial` | Coba login ke SSO Dapodik untuk memverifikasi | Admin Unit |
+| `GET` | `/v1/dapodik/perbedaan` | Pratinjau perbedaan data sebelum sync diterapkan | Admin Unit |
+| `POST` | `/v1/dapodik/sinkronisasi` | Jalankan sinkronisasi otomatis via SSO scraper | Admin Unit |
+| `POST` | `/v1/dapodik/impor` | Impor manual file JSON/Excel Dapodik (fallback) | Admin Unit |
+| `GET` | `/v1/dapodik/riwayat-sinkronisasi` | Riwayat & statistik sinkronisasi | Admin Unit |
+| `GET` | `/v1/dapodik/riwayat-sinkronisasi/:id` | Detail hasil sinkronisasi tertentu | Admin Unit |
+
+---
+
+### 8.3 Detail Mekanisme Sinkronisasi Dapodik (SSO Scraper)
+
+#### Latar Belakang
+
+Dapodik tidak menyediakan API publik resmi yang bisa diakses langsung. Oleh karena itu, MAHESA menggunakan pendekatan **SSO Scraper** — melakukan login ke portal Dapodik menggunakan kredensial resmi milik Admin Unit, kemudian mengekstrak data PTK (Pendidik dan Tenaga Kependidikan) secara terprogram.
+
+> [!IMPORTANT]
+> **Persyaratan**: Admin Unit wajib memiliki akun Dapodik aktif yang terdaftar untuk sekolah/unit kerjanya. Kredensial disimpan terenkripsi (AES-256) di tabel `kredensial_dapodik` dan **tidak pernah ditampilkan kembali** di UI setelah disimpan.
+
+#### Alur Teknis SSO Scraper
+
+```
+[1] SIMPAN KREDENSIAL (Satu kali setup)
+───────────────────────────────────────
+Admin Unit input username + password Dapodik
+          │
+          ▼
+Backend enkripsi password (AES-256) lalu simpan ke tabel kredensial_dapodik
+
+
+[2] VERIFIKASI (Opsional, sebelum sync)
+───────────────────────────────────────
+Backend kirim POST ke endpoint SSO Dapodik:
+  URL: https://sso.datadik.kemdikbud.go.id/auth (atau endpoint aktif)
+  Body: { username, password }
+          │
+          ▼
+SSO Dapodik balas dengan JWT / session token
+          │  Berhasil → simpan token sementara di Redis (TTL: 30 menit)
+          │  Gagal    → kembalikan error "Kredensial tidak valid"
+
+
+[3] PRATINJAU PERBEDAAN
+───────────────────────────────────────
+GET /v1/dapodik/perbedaan
+          │
+          ▼
+Scraper gunakan token (dari Redis) untuk hit endpoint data PTK Dapodik
+  Contoh: GET /api/ptk?sekolah_id=xxx (endpoint Dapodik internal)
+          │
+          ▼
+dapodik.mapper.ts → Transformasi respons Dapodik → format skema MAHESA
+          │
+          ▼
+Bandingkan dengan data di tabel pegawai (cocokkan via ptk_id / nuptk / nip)
+          │
+          ▼
+Kembalikan JSON diff ke frontend:
+  {
+    "baru": [{nama, nuptk, ...}],         ← Akan di-INSERT
+    "diperbarui": [{nama, perubahan:{}}], ← Akan di-UPDATE
+    "konflik": [{nama, alasan}],          ← Akan di-SKIP
+    "tidak_berubah": [...]                ← Di-ignore
+  }
+
+
+[4] JALANKAN SINKRONISASI
+───────────────────────────────────────
+POST /v1/dapodik/sinkronisasi
+          │
+          ▼
+Buat record di riwayat_sinkronisasi_dapodik (status: berjalan)
+          │
+          ▼
+Untuk setiap PTK dari Dapodik:
+  ├── ptk_id TIDAK ada di DB? → INSERT pegawai baru
+  ├── ptk_id ADA & data berbeda?
+  │     ├── Cek apakah ada konflik (lihat strategi konflik di bawah)
+  │     ├── Tidak konflik → UPDATE data
+  │     └── Konflik → SKIP, catat di ringkasan.konflik
+  └── ptk_id ADA & data sama → SKIP (tidak_berubah)
+          │
+          ▼
+Perbarui record riwayat (status: selesai, isi statistik)
+```
+
+#### Strategi Penanganan Konflik Data
+
+> **Konflik** terjadi saat data di MAHESA sudah diubah manual oleh Admin/Pegawai (misalnya: no. telepon, alamat) dan data Dapodik memberikan nilai yang berbeda.
+
+| Jenis Kolom | Sumber Pemenang | Alasan |
+|-------------|-----------------|--------|
+| **Data Identitas Formal** (NIP, NUPTK, pangkat, golongan, TMT, No. SK) | **Dapodik** selalu menang | Data ini bersumber dari dokumen resmi kepegawaian. |
+| **Data Tambahan** (telepon, alamat, foto, rekening, NPWP) | **MAHESA menang** (data lokal dipertahankan) | Dapodik tidak selalu memiliki data ini, dan pegawai sudah mengisi sendiri. |
+| **Riwayat Jabatan** (`jabatan_pegawai`) | **Dapodik menambahkan**, tidak menimpa | Jika ada entri baru dari Dapodik (TMT baru), akan di-INSERT sebagai riwayat baru. |
+| **Riwayat Pendidikan** (`pendidikan_pegawai`) | **Upsert by jenjang** | Jika sudah ada jenjang yang sama, UPDATE. Jika jenjang baru, INSERT. |
+
+```
+Contoh strategi konflik:
+  Data MAHESA (manual): telepon = "0812-xxx"
+  Data Dapodik:         telepon = "" (kosong)
+  → Hasil: MAHESA menang, telepon tetap "0812-xxx"
+
+  Data MAHESA: pangkat_golongan = "III/a"
+  Data Dapodik: pangkat_golongan = "III/b" (sudah naik pangkat)
+  → Hasil: Dapodik menang, diupdate ke "III/b"
+```
+
+#### Fallback: Impor Manual
+
+Jika portal Dapodik sedang maintenance atau SSO tidak dapat diakses, Admin Unit dapat:
+1. Export data PTK dari Dapodik secara manual ke format **Excel / JSON**
+2. Upload file tersebut melalui endpoint `POST /v1/dapodik/impor`
+3. Sistem akan memproses dan menerapkan aturan konflik yang sama persis
 
 #### ⚙️ Pengaturan
 
