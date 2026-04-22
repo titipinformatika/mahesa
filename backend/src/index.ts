@@ -1,10 +1,15 @@
 import { Elysia } from "elysia";
+import { otentikasiRoutes } from "./routes/v1/otentikasi";
 
 const app = new Elysia()
-  .get("/", () => "Hello MAHESA API is running!")
-  .get("/v1/health", () => ({ status: "OK", timestamp: new Date() }))
+  // Mendaftarkan grup rute otentikasi
+  .use(otentikasiRoutes)
+  
+  // Endpoint root untuk cek kesehatan server
+  .get("/", () => "Hello MAHESA Backend is Running!")
+  
   .listen(3000);
 
 console.log(
-  `🦊 MAHESA API is running at ${app.server?.hostname}:${app.server?.port}`
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
