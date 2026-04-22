@@ -2994,3 +2994,4 @@ CORS_ORIGINS=http://localhost:3001
 | **#4** | [Backend] Setup Keamanan (JWT) & Endpoint Login | ✅ Selesai | 22 April 2026 |
 | **#5** | [Backend] Sisa Endpoint Otentikasi & Integrasi Token FCM | ✅ Selesai | 22 April 2026 |
 | **#6** | [Backend] API CRUD Modul Organisasi (Dinas & Unit Kerja) | ✅ Selesai | 22 April 2026 |
+| **#7** | [Backend] API CRUD Modul Pegawai & Fitur Pencarian | ✅ Selesai | 22 April 2026 |
