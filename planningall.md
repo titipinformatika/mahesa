@@ -687,10 +687,16 @@ CREATE TABLE pegawai (
     alamat                  TEXT,
     url_foto                VARCHAR(500),
 
-    
-    -- ID Rekam Jejak Sync (Untuk mengetahui pegawai ini nyambung ke mana)
+    -- ID Rekam Jejak Sync & Multi-Source (MDM)
+    id_siasn                VARCHAR(100) UNIQUE,              -- Jika tersinkronisasi dari SIASN (BKN)
+    id_simpeg               VARCHAR(100) UNIQUE,              -- Jika tersinkronisasi dari SIMPEG Lokal
     ptk_id                  UUID UNIQUE,                      -- Jika tersinkronisasi dari Dapodik
-    id_simpeg               VARCHAR(100) UNIQUE,              -- Jika tersinkronisasi dari SIMPEG
+    sumber_awal             VARCHAR(20) NOT NULL DEFAULT 'manual', -- 'siasn', 'simpeg', 'dapodik', 'manual'
+
+    -- Raw Data (JSONB) untuk Audit & Rollback (Staging Area)
+    raw_data_siasn          JSONB,
+    raw_data_simpeg         JSONB,
+    raw_data_dapodik        JSONB,
     
     -- Tanggal mulai bergabung
     tanggal_masuk           DATE NOT NULL,
@@ -1422,6 +1428,52 @@ CREATE INDEX idx_log_audit_dibuat ON log_audit(dibuat_pada);
 -- Unit Kerja
 CREATE INDEX idx_unit_kerja_dinas ON unit_kerja(id_dinas);
 ```
+
+---
+
+### 5.3 Strategi Sinkronisasi Multi-Sumber (MDM) - Hybrid JSONB + Crosswalk Mapping
+
+Untuk mengatasi tantangan Master Data Management (MDM) di mana data pegawai berasal dari 3 sumber berbeda (SIASN, SIMPEG, Dapodik), MAHESA menggunakan arsitektur **Hybrid Staging + Crosswalk Mapping**. Pendekatan ini menjaga kecepatan query operasional sekaligus mempertahankan integritas data (High Fidelity) dari tiap sumber eksternal.
+
+#### 5.3.1 Prinsip *Single Source of Truth* (SSOT) per Domain
+Setiap sistem eksternal diperlakukan sebagai "Master" untuk domain data tertentu:
+* **SIASN / SIMPEG:** Master untuk Data Identitas Hukum & Karir ASN (NIP, Pangkat/Golongan, SK, Jabatan Struktural).
+* **DAPODIK:** Master untuk Konteks Pendidikan & Honorer (NUPTK, Jenis Guru, Tugas Tambahan, Tempat Tugas).
+* **MAHESA:** Master untuk Transaksional (Absensi, Titik Kordinat GPS, Cuti, Laporan Kinerja).
+
+#### 5.3.2 Strategi Pengikatan Data (*Anchor ID*)
+Ketika menyinkronkan data antar 3 sistem, pencocokan (matching) dilakukan dengan urutan:
+1. **Anchor Utama: NIK (Nomor Induk Kependudukan).** Unik untuk seluruh warga negara (PNS maupun Non-ASN).
+2. **Anchor Kedua: NIP (Nomor Induk Pegawai).** Sebagai *fallback* apabila NIK kosong/berbeda (Hanya untuk ASN).
+
+#### 5.3.3 Pemisahan Data *Raw* (Staging) dan Data Matang (Unified)
+Alih-alih membuat puluhan tabel referensi khusus untuk masing-masing sumber (seperti `jabatan_dapodik` atau `agama_siasn`) yang akan menyebabkan *Schema Bloat* dan melambatkan sistem, kita menggunakan pendekatan:
+
+1. **Staging JSONB pada Tabel `pegawai`**:
+   Data *response payload* mentah dari API SIASN, SIMPEG, atau Dapodik disimpan utuh ke dalam kolom bertipe `JSONB` (`raw_data_siasn`, `raw_data_simpeg`, `raw_data_dapodik`). Ini berguna untuk audit dan menjaga kemurnian data (kalau besok ada atribut baru dari BKN, kita tidak perlu merombak tabel).
+
+2. **Tabel Operasional Terpadu**:
+   MAHESA tetap beroperasi menggunakan satu set tabel `master_jabatan`, `master_agama`, dan `pegawai`. Ini memastikan performa query absensi harian tetap super cepat tanpa *spaghetti joins*.
+
+3. **Tabel Crosswalk Mapping Referensi**:
+   Tabel jembatan digunakan saat ETL (Extract, Transform, Load) untuk menerjemahkan kode ID dari luar (misal: "ISL" dari SIASN) menjadi ID Referensi internal MAHESA.
+
+```sql
+-- Tabel Crosswalk (Penerjemah Kode Referensi Eksternal)
+CREATE TABLE mapping_referensi_eksternal (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kategori            VARCHAR(50) NOT NULL,             -- 'agama', 'jabatan', 'pangkat', dsb.
+    sumber              VARCHAR(20) NOT NULL,             -- 'siasn', 'simpeg', 'dapodik'
+    kode_eksternal      VARCHAR(100) NOT NULL,            -- Contoh: 'ISL', '1'
+    id_referensi_mahesa UUID NOT NULL,                    -- FK ke master_agama / master_jabatan
+    UNIQUE(kategori, sumber, kode_eksternal)
+);
+```
+
+#### 5.3.4 Alur Kerja Sinkronisasi (ETL Internal)
+1. **Extract**: Malam hari (jam 02:00), *Cron Job* / Worker MAHESA menembak API SIASN/SIMPEG. Sementara itu, Operator Sekolah menembak Dapodik lewat *MAHESA Sync Tool*.
+2. **Transform**: Sistem membaca `payload` JSON mentah. Jika menjumpai data referensi (misal kode jabatan), sistem akan melihat tabel `mapping_referensi_eksternal` untuk mencari terjemahan ID-nya di MAHESA.
+3. **Load**: Data yang sudah *matang* (terjemahan) kemudian di-*update* (upsert) secara rapi ke *field* terstruktur di tabel `pegawai`. Jika terjadi konflik (pegawai melakukan perubahan mandiri via Aplikasi dan telah di-*approve*), maka data manual pegawai (Manual Override) akan menang mengalahkan *auto-sync*.
 
 ---
 

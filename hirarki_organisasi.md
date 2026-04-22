@@ -64,29 +64,26 @@ Dalam sistem, ada **5 Peran Utama (Role)**. Masing-masing peran menentukan *plat
   * Memantau dan merangkum rekapitulasi data **Sekolah (Level 3)** yang menunjuk (bernaung) pada UPT-nya.
   * Membantu memonitoring laporan Dinas Luar (DL) skala kawasan/wilayah mereka.
 
-### 3. Solusi Status Ganda (id_admin_unit)
+### 3. Solusi Status Ganda & Jembatan Multi-Admin
 
-Dalam kasus dunia nyata, ada kalanya **Budi** terdaftar secara fisik sebagai Guru (Level 3 / Sekolah), namun ia ditunjuk juga menjadi operator/admin bagi **UPT (Level 2)** yang menaungi wilayahnya.
+Dalam kasus dunia nyata, sering terjadi:
+1. Sebuah tata usaha (Level 2/3) memiliki **lebih dari 1 Admin/Operator**.
+2. **Budi** terdaftar secara fisik sebagai Guru (Level 3 / Sekolah), namun ia ditunjuk juga menjadi salah satu operator/admin bagi **UPT (Level 2)** yang menaungi wilayahnya.
 
-Untuk menjaga struktur "Budi masuk/absen di SDN 1 Cibinong" tetap relevan (sehingga rekam jejak GPS Budi ke sekolah tidak terpotong) namun memberikan hak "Web Dashboard UPT" kepadanya, rancangan tabel `unit_kerja` memiliki kolom spesifik:
-* `id_kepala_unit` (Pucuk pimpinan/Kepala)
-* `id_admin_unit` (Daftar ID Pegawai/Operator yang dipercaya atas unit tersebut)
+Untuk menjaga struktur "Budi absen di SDN 1 Cibinong" tetap murni (berbasis GPS harian) namun memberikan hak "Web Dashboard UPT" kepadanya tanpa menjejali tabel `unit_kerja`, kita menggunakan tabel relasi perantara **`akses_admin_unit`**:
+* Tabel `akses_admin_unit` menghubungkan `id_unit_kerja` dengan *banyak* `id_pegawai`.
 
 **Cara Kerja Mesin:**
-* Admin Dinas mengganti Role pengguna Budi menjadi `admin_upt`.
-* Admin Dinas mengatur tabel `unit_kerja` UPT Cibinong (Level 2), mengisi field `id_admin_unit` dengan ID Pegawai milik Budi. 
-* Saat Budi absen pagi hari via *Mobile App*, sistem menganggap ia adalah **Guru biasa** yang harus absen di kordinat SDN 1 Cibinong (karena pada tabel `pegawai`-nya ia tetap terdaftar di SDN 1).
-* Di sisi lain, saat Budi membuka komputer dan melakukan login *Web Dashboard*, karena rolenya adalah `admin_upt`, keamanan (Middleware API) mengizinkan ia masuk. Dan ia disajikan kumpulan data yang diseleksi spesifik dari **UPT di mana namanya tercatat pada field id_admin_unit**!
+* Admin Dinas memasukkan data (Insert) ke tabel `akses_admin_unit`, memetakan UPT Cibinong (Level 2) dengan ID Pegawai milik Budi. 
+* Saat Budi absen pagi hari via *Mobile App*, sistem menganggap ia adalah **Pegawai fisik biasa** yang bertugas dan wajib absen di kordinat SDN 1 Cibinong.
+* Di sisi lain, saat Budi membuka komputer dan melakukan login *Web Dashboard*, keamanan (Middleware API) menyadari ID Pegawai Budi tercantum di dalam relasi `akses_admin_unit` untuk UPT tersebut. Budi pun disajikan data pelaporan sekolah khusus dari wilayah kekuasaan UPT-nya.
 
-### Kesimpulan
-Admin Dinas sama sekali tidak perlu membuat relasi rumit/tabel *mapping* ganda. 
-1. Cukup mutasikan/tempatkan seorang pegawai mendaftar di Unit Kerja mana (tempat dia berkantor fisik & wajib absen GPS).
-2. Jika ia ditugaskan menjadi operator administratif untuk menaungi sebuah unit spesifik (misal admin unit untuk sekolah/UPT nya), sematkan ID Pegawainya ke dalam field `id_admin_unit` milik sekolah/UPT tersebut.
-3. Tetapkan peran di tabel `pengguna`-nya menjadi `admin_unit` atau `admin_upt`!
+### Kesimpulan Multi-Admin
+Admin Dinas tidak perlu membuat relasi rumit. Cukup tempatkan seorang pegawai di Unit Kerja asalnya (tempat dia berkantor fisik & wajib absen GPS). Jika ia ditugaskan menjadi operator administratif ganda (untuk sekolahnya, atau bahkan untuk UPT di atasnya), cukup tambahkan riwayat namanya ke dalam tabel jembatan `akses_admin_unit`.
 
-### 4. 👑 Pimpinan Unit Kerja (Kepala Sekolah / Kepala UPT)
+### 4. 👑 Pimpinan Unit Kerja & Pejabat Struktural (Kepala Sekolah / PLT)
 * **Platform:** 📱 Mobile App
-* **Siapa mereka:** Pucuk pimpinan di suatu unit kerja yang membawahi para pegawai/guru.
+* **Siapa mereka:** Pucuk pimpinan (Definitif atau PLT) yang tercatat aktif memimpin dalam tabel susunan **`pejabat_unit_kerja`**.
 * **Otoritas:**
   * Fokus utamanya adalah **Persetujuan (Approval)** dan **Memantau Kehadiran**.
   * Berhak melakukan **Input Absensi Manual** (mengabsenkan bawahan) jika bawahannya terkendala (tanpa kewajiban validasi GPS/Selfie).
@@ -127,15 +124,15 @@ Agar *AI Developer* atau *Junior Programmer* mudah memahami aturan *business log
 ## 💾 Representasi Database Secara Singkat
 
 ```sql
-dinas (Tabel 1 / Level 1, data tunggal per kab/kota)
+dinas (Tabel 1 / Level 1)
   | 
   |--- unit_kerja (Tabel 2, banyak cabang)
-         (Jika Level 2/UPT: `id_induk_unit` = NULL)
-         (Jika Level 3/Sekolah: `id_induk_unit` = Menunjuk ke Level 2 atau NULL)
          |
          |--- pegawai (Tabel 3, banyak pegawai per unitnya)
-              (Jika ia "Kepala Sekolah", role = 'pimpinan_unit_kerja')
-              (Jika ia "Guru Biasa", role = 'pegawai')
+         |
+         |--- (Tabel Mapping & Modul Baru Tipe N:M)
+               > akses_admin_unit : Siapa saja tu/operator di unit ini?
+               > pejabat_unit_kerja : Siapa Kepsek Definitif/PLT saat ini?
 ```
 
 Dengan desain di atas, keamanan (multi-tenant per unit kerja) harus di filter selalu menggunakan relasi `id_unit_kerja` pada Drizzle/PostgreSQL! Jangan sampai *Admin Unit Kerja A* mengget data dari *Unit Kerja B*.
