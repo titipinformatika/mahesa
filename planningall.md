@@ -2989,6 +2989,6 @@ CORS_ORIGINS=http://localhost:3001
 | ID Issue | Judul | Status | Tanggal Selesai |
 |----------|-------|--------|-----------------|
 | **#1** | [Backend] Inisialisasi Proyek Bun + Elysia & Setup Drizzle ORM | ✅ Selesai | 22 April 2026 |
-| **#2** | [Backend] Pembuatan Skema Database Master Organisasi | ⏳ Antrian | - |
+| **#2** | [Backend] Pembuatan Skema Database Master Organisasi | 📋 Didelegasikan (plan2.md) | 22 April 2026 |
 | **#3** | [Backend] Pembuatan Skema Pegawai & Struktur MDM | ⏳ Antrian | - |
 | **#4** | [Backend] Setup Keamanan (JWT) & Endpoint Login | ⏳ Antrian | - |
