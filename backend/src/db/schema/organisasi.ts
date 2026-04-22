@@ -1,6 +1,7 @@
 import { 
   pgTable, uuid, varchar, text, boolean, timestamp, decimal, integer, date, pgEnum, AnyPgColumn 
 } from 'drizzle-orm/pg-core';
+import { pegawai } from './pegawai';
 
 // ------------------------------------------------------
 // 1. Tabel level_unit_kerja
@@ -73,9 +74,7 @@ export const pejabatUnitKerja = pgTable('pejabat_unit_kerja', {
   id: uuid('id').defaultRandom().primaryKey(),
   id_unit_kerja: uuid('id_unit_kerja').notNull().references(() => unitKerja.id, { onDelete: 'cascade' }),
   
-  // Catatan: id_pegawai belum diberi .references() karena tabel pegawai baru akan dibuat di Issue #3.
-  // Kolom ini akan kita update referensinya nanti.
-  id_pegawai: uuid('id_pegawai').notNull(), 
+  id_pegawai: uuid('id_pegawai').notNull().references(() => pegawai.id), 
   
   jabatan: jabatanEnum('jabatan').notNull(),
   tanggal_mulai: date('tanggal_mulai').notNull(),
@@ -93,9 +92,9 @@ export const aksesAdminUnit = pgTable('akses_admin_unit', {
   id: uuid('id').defaultRandom().primaryKey(),
   id_unit_kerja: uuid('id_unit_kerja').notNull().references(() => unitKerja.id, { onDelete: 'cascade' }),
   
-  // Catatan: id_pegawai & diberikan_oleh belum direferensikan ke tabel pegawai. Akan di-update di Issue #3.
-  id_pegawai: uuid('id_pegawai').notNull(), 
-  diberikan_oleh: uuid('diberikan_oleh'), 
+  // Catatan: id_pegawai & diberikan_oleh sudah direferensikan ke tabel pegawai.
+  id_pegawai: uuid('id_pegawai').notNull().references(() => pegawai.id), 
+  diberikan_oleh: uuid('diberikan_oleh').references(() => pegawai.id), 
   
   peran: peranAdminUnitEnum('peran').notNull().default('admin_unit'),
   aktif: boolean('aktif').notNull().default(true),
