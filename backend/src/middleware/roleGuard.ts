@@ -5,7 +5,7 @@ import { authPlugin } from './authGuard';
 export const roleGuard = (allowedRoles: string[]) => {
   return new Elysia()
     .use(authPlugin)
-    .onBeforeHandle(({ user, set }) => {
+    .onBeforeHandle(({ user, set }: any) => {
       if (!allowedRoles.includes(user.peran)) {
         set.status = 403;
         throw new Error('Anda tidak memiliki akses untuk melakukan tindakan ini');
