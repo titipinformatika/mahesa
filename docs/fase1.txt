@@ -1,0 +1,78 @@
+### Issue #1: `[Backend] Inisialisasi Proyek Bun + Elysia & Setup Drizzle ORM`
+**Description:**
+```markdown
+**Tujuan:**
+Menyiapkan kerangka dasar server backend dan koneksi ke database PostgreSQL.
+
+**Task List:**
+- [ ] Buat folder `backend`.
+- [ ] Inisialisasi proyek menggunakan `bun init`.
+- [ ] Install framework `elysia`.
+- [ ] Install `drizzle-orm`, `postgres`, dan `drizzle-kit`.
+- [ ] Buat file koneksi database di `src/db/index.ts`.
+- [ ] Buat konfigurasi migrasi di `drizzle.config.ts`.
+- [ ] Pastikan server bisa berjalan di port 3000 dengan pesan "MAHESA API is running".
+
+**Referensi:** 
+Baca file `planningall.md` Bab 2 (Tech Stack) dan Fase 1.1 - 1.2 di `todolist.md`.
+```
+
+---
+
+### Issue #2: `[Backend] Pembuatan Skema Database Master Organisasi`
+**Description:**
+```markdown
+**Tujuan:**
+Mengubah desain tabel organisasi menjadi kode TypeScript (Drizzle Schema).
+
+**Task List:**
+- [ ] Buat file `src/db/schema/organisasi.ts`.
+- [ ] Buat skema untuk tabel `dinas`.
+- [ ] Buat skema untuk tabel `level_unit_kerja`.
+- [ ] Buat skema untuk tabel `unit_kerja`.
+- [ ] Buat skema tabel jembatan `pejabat_unit_kerja` dan `akses_admin_unit`.
+- [ ] Eksekusi command `bunx drizzle-kit push` untuk memastikan tabel terbuat di PostgreSQL.
+
+**Referensi:** 
+Baca file `planningall.md` Bab 5.2 (Skema Tabel Detail)
+```
+
+---
+
+### Issue #3: `[Backend] Pembuatan Skema Pegawai & Struktur MDM (Multi-Sumber)`
+**Description:**
+```markdown
+**Tujuan:**
+Membuat tabel pegawai yang siap menampung data dari SIASN, Dapodik, dan SIMPEG.
+
+**Task List:**
+- [ ] Buat file `src/db/schema/pegawai.ts`.
+- [ ] Buat skema untuk tabel `pengguna` (untuk login).
+- [ ] Buat skema untuk `skema_jam_kerja` dan `master_jenis_kepegawaian`.
+- [ ] Buat skema utama `pegawai`.
+- [ ] **PENTING**: Di tabel `pegawai`, pastikan membuat kolom tracking `id_siasn`, `id_simpeg`, `ptk_id`, `sumber_awal`.
+- [ ] **PENTING**: Di tabel `pegawai`, wajib buat kolom bertipe JSONB: `raw_data_siasn`, `raw_data_simpeg`, `raw_data_dapodik`.
+
+**Referensi:** 
+Baca `planningall.md` Bab 5.2 dan 5.3 (Strategi Sinkronisasi Multi-Sumber MDM).
+```
+
+---
+
+### Issue #4: `[Backend] Setup Keamanan (JWT) & Endpoint Login`
+**Description:**
+```markdown
+**Tujuan:**
+Membuat pintu gerbang masuk aplikasi dengan sistem Role-Based Access Control (RBAC).
+
+**Task List:**
+- [ ] Install `@elysiajs/jwt` dan `bcryptjs`.
+- [ ] Buat Middleware `authGuard` untuk memvalidasi Bearer Token.
+- [ ] Buat Middleware `roleGuard(allowedRoles)` untuk memfilter akses berdasarkan peran pengguna.
+- [ ] Buat API Endpoint `POST /v1/otentikasi/masuk`.
+- [ ] Tulis logika: Cek email & hash password -> Ambil data unit_kerja -> Generate token JWT.
+- [ ] Uji coba endpoint menggunakan Postman/ThunderClient.
+
+**Referensi:**
+Baca `planningall.md` Bab 4 (Sistem Peran) dan Bab 8.2 (Daftar Endpoint Otentikasi).
+```

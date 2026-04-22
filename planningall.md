@@ -2641,9 +2641,9 @@ mobile/
 ### Fase 1: Fondasi & Persiapan (Minggu 1-2)
 
 ```
-[ ] Persiapan monorepo (backend/, web/, mobile/)
-[ ] Backend: Inisialisasi Bun + Elysia, Drizzle + PostgreSQL
-[ ] Backend: Buat SEMUA skema database (26+ tabel)
+[x] Persiapan monorepo (backend/, web/, mobile/) - *Dimulai (backend/)*
+[x] Backend: Inisialisasi Bun + Elysia, Drizzle + PostgreSQL - **(Issue #1 Selesai)**
+[ ] Backend: Buat SEMUA skema database (26+ tabel) - **(Issue #2 & #3 Menunggu)**
 [ ] Backend: Jalankan migrasi, seed data (dinas, unit kerja, skema_jam_kerja, jenis_cuti, skema_dinas_luar, jenis_kegiatan_lhkp)
 [ ] Backend: Middleware (pencatat, CORS, penanganan error)
 [ ] Backend: Pustaka utilitas (jwt, hash, paginasi, respons, geo, penyimpanan)
@@ -2978,6 +2978,17 @@ CORS_ORIGINS=http://localhost:3001
 ---
 
 *Dibuat: 17 April 2026*
-*Terakhir diperbarui: 17 April 2026*
+*Terakhir diperbarui: 22 April 2026*
 *Proyek: MAHESA — Manajemen Human-resource & Employee System Application*
 *Domain: Dinas Pendidikan*
+
+---
+
+## 📜 Log Issue & Progress
+
+| ID Issue | Judul | Status | Tanggal Selesai |
+|----------|-------|--------|-----------------|
+| **#1** | [Backend] Inisialisasi Proyek Bun + Elysia & Setup Drizzle ORM | ✅ Selesai | 22 April 2026 |
+| **#2** | [Backend] Pembuatan Skema Database Master Organisasi | ⏳ Antrian | - |
+| **#3** | [Backend] Pembuatan Skema Pegawai & Struktur MDM | ⏳ Antrian | - |
+| **#4** | [Backend] Setup Keamanan (JWT) & Endpoint Login | ⏳ Antrian | - |

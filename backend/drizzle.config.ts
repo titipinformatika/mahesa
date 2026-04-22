@@ -6,7 +6,7 @@ export default defineConfig({
   dialect: 'postgresql',       // Tipe database yang digunakan
   dbCredentials: {
     // Sesuaikan url ini dengan koneksi database lokal Anda
-    url: process.env.DATABASE_URL || 'postgres://postgres:password_disini@localhost:5432/mahesa_db',
+    url: process.env.DATABASE_URL || 'postgres://postgres:root@localhost:5432/mahesa_db',
   },
   verbose: true,
   strict: true,

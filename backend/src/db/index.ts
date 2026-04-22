@@ -3,7 +3,7 @@ import postgres from 'postgres';
 
 // Koneksi akan membaca dari environment variable DATABASE_URL
 // Jika tidak ada, gunakan string default ini (sesuaikan password & db name)
-const connectionString = process.env.DATABASE_URL || 'postgres://postgres:password_disini@localhost:5432/mahesa_db';
+const connectionString = process.env.DATABASE_URL || 'postgres://postgres:root@localhost:5432/mahesa_db';
 
 // Konfigurasi client postgres
 const client = postgres(connectionString);
