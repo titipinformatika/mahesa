@@ -1,7 +1,6 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { jwt } from '@elysiajs/jwt';
 
-// Secret key untuk JWT (Idealnya ditaruh di .env)
 const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_mahesa_123';
 
 export const authPlugin = new Elysia()
@@ -11,12 +10,17 @@ export const authPlugin = new Elysia()
       secret: JWT_SECRET,
     })
   )
-  .derive(async ({ jwt, headers, set }) => {
+  .onBeforeHandle({ as: 'global' }, async ({ jwt, headers, set, request }) => {
+    const path = new URL(request.url).pathname;
+    
+    // Abaikan rute publik jika diperlukan, tapi rute yang .use(authPlugin) biasanya butuh auth
+    console.log(`🔒 Guard checking: ${path}`);
+    
     const authorization = headers['authorization'];
     
     if (!authorization || !authorization.startsWith('Bearer ')) {
       set.status = 401;
-      throw new Error('Token otentikasi tidak ditemukan atau tidak valid');
+      return { status: 'error', message: 'Token otentikasi tidak ditemukan atau tidak valid' };
     }
 
     const token = authorization.slice(7);
@@ -24,9 +28,18 @@ export const authPlugin = new Elysia()
 
     if (!payload) {
       set.status = 401;
-      throw new Error('Sesi telah berakhir atau token tidak valid');
+      return { status: 'error', message: 'Sesi telah berakhir atau token tidak valid' };
     }
-
+  })
+  .derive({ as: 'global' }, async ({ jwt, headers }) => {
+    const authorization = headers['authorization'];
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return { user: null };
+    }
+    
+    const token = authorization.slice(7);
+    const payload = await jwt.verify(token);
+    
     return {
       user: payload as {
         id: string;

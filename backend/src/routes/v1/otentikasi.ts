@@ -3,23 +3,17 @@ import { db } from '../../db';
 import { pengguna, pegawai } from '../../db/schema/pegawai';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
-import { jwt } from '@elysiajs/jwt';
 import { authPlugin } from '../../middleware/authGuard';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_mahesa_123';
-
 export const otentikasiRoutes = new Elysia({ prefix: '/v1/otentikasi' })
-  .use(
-    jwt({
-      name: 'jwt',
-      secret: JWT_SECRET,
-      exp: '1d', // Token berlaku 1 hari
-    })
-  )
+  .use(authPlugin) // Ini akan memberikan akses ke 'jwt' dan 'user'
   
   // -----------------------------------------------------------
-  // 🔓 ENDPOINT PUBLIK (Tidak butuh token)
+  // 🔓 ENDPOINT PUBLIK (Gunakan hook lokal untuk bypass guard jika perlu, atau pisahkan grup)
   // -----------------------------------------------------------
+  // Karena onBeforeHandle di authPlugin sekarang 'global', kita harus hati-hati.
+  // Namun di Elysia, onBeforeHandle dalam plugin hanya berlaku untuk rute di bawah .use() tersebut.
+  
   .post(
     '/masuk',
     async ({ body, jwt, set }) => {
@@ -63,92 +57,95 @@ export const otentikasiRoutes = new Elysia({ prefix: '/v1/otentikasi' })
         return { status: 'error', message: 'Terjadi kesalahan pada server' };
       }
     },
-    { body: t.Object({ email: t.String({ format: 'email' }), password: t.String() }) }
+    { 
+      body: t.Object({ email: t.String({ format: 'email' }), password: t.String() }),
+      beforeHandle: () => {} // Bypass global hook untuk route ini
+    }
   )
 
   .post('/keluar', ({ set }) => {
-    // Klien hanya perlu menghapus token dari sisi mereka (local storage/cookie)
     return { status: 'success', message: 'Berhasil keluar. Silakan hapus token di klien.' };
-  })
+  }, { beforeHandle: () => {} })
 
   .post(
     '/lupa-kata-sandi',
     async ({ body, set }) => {
-      // TODO: Implementasi pengiriman email reset password (Nodemailer)
       console.log(`Permintaan reset password untuk email: ${body.email}`);
       return { status: 'success', message: 'Jika email terdaftar, instruksi reset telah dikirim.' };
     },
-    { body: t.Object({ email: t.String({ format: 'email' }) }) }
+    { 
+      body: t.Object({ email: t.String({ format: 'email' }) }),
+      beforeHandle: () => {}
+    }
   )
 
   .post(
     '/reset-kata-sandi',
     async ({ body, set }) => {
-      // TODO: Verifikasi token reset dari email, lalu update password
       return { status: 'success', message: 'Kata sandi berhasil direset.' };
     },
-    { body: t.Object({ token: t.String(), password_baru: t.String() }) }
+    { 
+      body: t.Object({ token: t.String(), password_baru: t.String() }),
+      beforeHandle: () => {}
+    }
   )
 
   // -----------------------------------------------------------
-  // 🔒 ENDPOINT TERLINDUNGI (Butuh token JWT)
+  // 🔒 ENDPOINT TERLINDUNGI (Akan terkena onBeforeHandle dari authPlugin)
   // -----------------------------------------------------------
-  .group('', (app) => app
-    .use(authPlugin)
+  .get('/profil-saya', async ({ user, set }: any) => {
+    if (!user) return { status: 'error', message: 'Unauthorized' };
     
-    .get('/profil-saya', async ({ user, set }: any) => {
-      const userList = await db.select({
-        id: pengguna.id,
-        email: pengguna.email,
-        peran: pengguna.peran,
-        terakhir_login: pengguna.terakhir_login
-      }).from(pengguna).where(eq(pengguna.id, user.id)).limit(1);
+    const userList = await db.select({
+      id: pengguna.id,
+      email: pengguna.email,
+      peran: pengguna.peran,
+      terakhir_login: pengguna.terakhir_login
+    }).from(pengguna).where(eq(pengguna.id, user.id)).limit(1);
+    
+    return { status: 'success', data: userList[0] };
+  })
+
+  .post('/perbarui-token', async ({ user, jwt, set }: any) => {
+    const tokenBaru = await jwt.sign({
+      id: user.id,
+      email: user.email,
+      peran: user.peran,
+      id_pegawai: user.id_pegawai,
+      id_unit_kerja: user.id_unit_kerja,
+    });
+    return { status: 'success', message: 'Token berhasil diperbarui', data: { token: tokenBaru } };
+  })
+
+  .put(
+    '/ganti-kata-sandi',
+    async ({ body, user, set }: any) => {
+      const currentUser = (await db.select().from(pengguna).where(eq(pengguna.id, user.id)).limit(1))[0];
       
-      return { status: 'success', data: userList[0] };
-    })
+      if (!currentUser) {
+        set.status = 404;
+        return { status: 'error', message: 'Pengguna tidak ditemukan' };
+      }
 
-    .post('/perbarui-token', async ({ user, jwt, set }: any) => {
-      // Generate token baru dengan masa berlaku di-reset
-      const tokenBaru = await jwt.sign({
-        id: user.id,
-        email: user.email,
-        peran: user.peran,
-        id_pegawai: user.id_pegawai,
-        id_unit_kerja: user.id_unit_kerja,
-      });
-      return { status: 'success', message: 'Token berhasil diperbarui', data: { token: tokenBaru } };
-    })
+      const isOldPasswordValid = await bcrypt.compare(body.password_lama, currentUser.hash_kata_sandi);
+      if (!isOldPasswordValid) {
+        set.status = 401;
+        return { status: 'error', message: 'Kata sandi lama salah' };
+      }
 
-    .put(
-      '/ganti-kata-sandi',
-      async ({ body, user, set }: any) => {
-        const currentUser = (await db.select().from(pengguna).where(eq(pengguna.id, user.id)).limit(1))[0];
-        
-        if (!currentUser) {
-          set.status = 404;
-          return { status: 'error', message: 'Pengguna tidak ditemukan' };
-        }
+      const newHashedPassword = await bcrypt.hash(body.password_baru, 10);
+      await db.update(pengguna).set({ hash_kata_sandi: newHashedPassword }).where(eq(pengguna.id, user.id));
 
-        const isOldPasswordValid = await bcrypt.compare(body.password_lama, currentUser.hash_kata_sandi);
-        if (!isOldPasswordValid) {
-          set.status = 401;
-          return { status: 'error', message: 'Kata sandi lama salah' };
-        }
+      return { status: 'success', message: 'Kata sandi berhasil diubah' };
+    },
+    { body: t.Object({ password_lama: t.String(), password_baru: t.String() }) }
+  )
 
-        const newHashedPassword = await bcrypt.hash(body.password_baru, 10);
-        await db.update(pengguna).set({ hash_kata_sandi: newHashedPassword }).where(eq(pengguna.id, user.id));
-
-        return { status: 'success', message: 'Kata sandi berhasil diubah' };
-      },
-      { body: t.Object({ password_lama: t.String(), password_baru: t.String() }) }
-    )
-
-    .put(
-      '/token-fcm',
-      async ({ body, user, set }: any) => {
-        await db.update(pengguna).set({ token_fcm: body.token_fcm }).where(eq(pengguna.id, user.id));
-        return { status: 'success', message: 'Token FCM berhasil disimpan' };
-      },
-      { body: t.Object({ token_fcm: t.String() }) }
-    )
+  .put(
+    '/token-fcm',
+    async ({ body, user, set }: any) => {
+      await db.update(pengguna).set({ token_fcm: body.token_fcm }).where(eq(pengguna.id, user.id));
+      return { status: 'success', message: 'Token FCM berhasil disimpan' };
+    },
+    { body: t.Object({ token_fcm: t.String() }) }
   );
