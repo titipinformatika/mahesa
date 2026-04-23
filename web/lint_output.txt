@@ -1,0 +1,73 @@
+
+> web@0.1.0 lint
+> eslint
+
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\dasbor\page.tsx
+   5:10  warning  'getToken' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  18:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\dasbor\page.tsx:18:5
+  16 |       return;
+  17 |     }
+> 18 |     setPeran(getRole());
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  19 |   }, [router]);
+  20 |
+  21 |   const handleLogout = () => {  react-hooks/set-state-in-effect
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\pegawai\[id]\page.tsx
+  14:36  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  48:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\pegawai\page.tsx
+  12:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  14:10  warning  'error' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  27:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  35:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\pegawai\page.tsx:35:5
+  33 |
+  34 |   useEffect(() => {
+> 35 |     fetchPegawai(search, page);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  36 |   }, [page]);
+  37 |
+  38 |   const handleSearch = (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+  36:6   warning  React Hook useEffect has a missing dependency: 'search'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+
+D:\MYDATA\Project\MAHESA\web\src\app\(otentikasi)\masuk\page.tsx
+  41:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\MYDATA\Project\MAHESA\web\src\components\tata-letak\sidebar.tsx
+  15:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\components\tata-letak\sidebar.tsx:15:5
+  13 |
+  14 |   useEffect(() => {
+> 15 |     setPeran(getRole());
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  16 |   }, []);
+  17 |
+  18 |   // Menu dinamis berdasarkan peran  react-hooks/set-state-in-effect
+
+✖ 11 problems (6 errors, 5 warnings)
+
