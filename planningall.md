@@ -2998,4 +2998,4 @@ CORS_ORIGINS=http://localhost:3001
 | **#8** | [Backend] Integrasi MinIO & API Upload Foto Profil | ✅ Selesai | 23 April 2026 |
 | **#9** | [Backend] Sistem Pengajuan Biodata (Workflow Persetujuan) | ✅ Selesai | 23 April 2026 |
 | **#10** | [Backend] Seeder Database Master | ✅ Selesai | 23 April 2026 |
-| **#11** | [Backend] Modul Absensi (GPS & Selfie Verification) | 📋 Didelegasikan (issue15.md) | 23 April 2026 |
+| **#11** | [Backend] Modul Absensi (GPS & Selfie Verification) | ✅ Selesai | 23 April 2026 |

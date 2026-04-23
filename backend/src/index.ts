@@ -3,6 +3,7 @@ import { otentikasiRoutes } from "./routes/v1/otentikasi";
 import { organisasiRoutes } from "./routes/v1/organisasi";
 import { pegawaiRoutes } from "./routes/v1/pegawai";
 import { biodataRoutes } from "./routes/v1/biodata";
+import { absensiRoutes } from "./routes/v1/absensi";
 
 const app = new Elysia()
   // Mendaftarkan grup rute otentikasi
@@ -10,6 +11,7 @@ const app = new Elysia()
   .use(organisasiRoutes)
   .use(pegawaiRoutes)
   .use(biodataRoutes)
+  .use(absensiRoutes)
   
   // Endpoint root untuk cek kesehatan server
   .get("/", () => "Hello MAHESA Backend is Running!")
