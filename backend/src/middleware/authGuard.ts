@@ -13,7 +13,17 @@ export const authPlugin = new Elysia()
   .onBeforeHandle({ as: 'global' }, async ({ jwt, headers, set, request }) => {
     const path = new URL(request.url).pathname;
     
-    // Abaikan rute publik jika diperlukan, tapi rute yang .use(authPlugin) biasanya butuh auth
+    // Daftar rute publik yang tidak memerlukan token
+    const publicRoutes = [
+      '/v1/otentikasi/masuk',
+      '/v1/otentikasi/lupa-kata-sandi',
+      '/v1/otentikasi/reset-kata-sandi'
+    ];
+
+    if (publicRoutes.includes(path)) {
+      return;
+    }
+    
     console.log(`🔒 Guard checking: ${path}`);
     
     const authorization = headers['authorization'];

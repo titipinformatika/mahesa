@@ -4,6 +4,7 @@ import { pegawai, pengguna } from '../../db/schema/pegawai';
 import { eq, and, ilike, sql, count } from 'drizzle-orm';
 import { authPlugin } from '../../middleware/authGuard';
 import * as bcrypt from 'bcryptjs';
+import { uploadFile, deleteFile, extractKeyFromUrl } from '../../lib/penyimpanan';
 
 export const pegawaiRoutes = new Elysia({ prefix: '/v1/pegawai' })
   .use(authPlugin) // Semua endpoint pegawai butuh otentikasi
@@ -281,6 +282,91 @@ export const pegawaiRoutes = new Elysia({ prefix: '/v1/pegawai' })
       })
     }
   )
+
+  // -----------------------------------------------------------
+  // 📸 PUT /v1/pegawai/:id/foto
+  // Upload foto profil pegawai.
+  // Menerima multipart/form-data dengan field "foto".
+  // -----------------------------------------------------------
+  .put(
+    '/:id/foto',
+    async ({ params: { id }, body, user, set }: any) => {
+      try {
+        // Cek apakah pegawai boleh upload (hanya admin atau diri sendiri)
+        if (user.peran === 'pegawai' && user.id_pegawai !== id) {
+          set.status = 403;
+          return { status: 'error', message: 'Anda hanya bisa mengubah foto diri sendiri' };
+        }
+
+        const file = body.foto;
+        if (!file) {
+          set.status = 400;
+          return { status: 'error', message: 'File foto tidak ditemukan. Kirim dengan field name "foto".' };
+        }
+
+        // Validasi tipe file
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          set.status = 400;
+          return { status: 'error', message: 'Hanya file JPEG, PNG, atau WebP yang diizinkan' };
+        }
+
+        // Validasi ukuran file (max 1MB)
+        const maxSize = 1 * 1024 * 1024; // 1MB
+        if (file.size > maxSize) {
+          set.status = 400;
+          return { status: 'error', message: 'Ukuran file melebihi batas (maks 1MB)' };
+        }
+
+        // Baca file menjadi buffer
+        const arrayBuffer = await file.arrayBuffer();
+        let buffer = Buffer.from(arrayBuffer);
+
+        // Kompresi gambar menggunakan sharp (opsional, bisa diaktifkan jika sharp terinstal)
+        try {
+          const sharp = (await import('sharp')).default;
+          buffer = await sharp(buffer)
+            .resize(400, 400, { fit: 'cover' }) // Resize ke 400x400 crop tengah
+            .webp({ quality: 80 }) // Kompres ke format WebP
+            .toBuffer();
+        } catch (sharpError) {
+          // Jika sharp gagal diimpor/dijalankan, gunakan file asli
+          console.warn('⚠️ Sharp tidak tersedia, menggunakan file asli tanpa kompresi.');
+        }
+
+        // Hapus foto lama jika ada
+        const existing = await db.select({ url_foto: pegawai.url_foto }).from(pegawai).where(eq(pegawai.id, id)).limit(1);
+        if (existing[0]?.url_foto) {
+          const oldKey = extractKeyFromUrl(existing[0].url_foto);
+          if (oldKey) {
+            try { await deleteFile(oldKey); } catch { /* Abaikan jika gagal hapus */ }
+          }
+        }
+
+        // Upload ke MinIO
+        const key = `foto-profil/${id}.webp`;
+        const url = await uploadFile(key, buffer, 'image/webp');
+
+        // Update database
+        await db.update(pegawai).set({
+          url_foto: url,
+          diperbarui_pada: new Date(),
+        }).where(eq(pegawai.id, id));
+
+        return { status: 'success', message: 'Foto profil berhasil diperbarui', data: { url_foto: url } };
+      } catch (error: any) {
+        console.error('Upload foto error:', error);
+        set.status = 500;
+        return { status: 'error', message: error.message || 'Gagal mengunggah foto profil' };
+      }
+    },
+    {
+      body: t.Object({
+        foto: t.File({ maxSize: '1m', type: ['image/jpeg', 'image/png', 'image/webp'] }),
+      })
+    }
+  )
+
 
   // -----------------------------------------------------------
   // 🗑️ DELETE /v1/pegawai/:id

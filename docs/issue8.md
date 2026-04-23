@@ -167,11 +167,11 @@ Tambahkan blok kode berikut **SEBELUM** baris `.delete('/:id', ...)` (sebelum en
           return { status: 'error', message: 'Hanya file JPEG, PNG, atau WebP yang diizinkan' };
         }
 
-        // Validasi ukuran file (max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        // Validasi ukuran file (max 1MB)
+        const maxSize = 1 * 1024 * 1024; // 1MB
         if (file.size > maxSize) {
           set.status = 400;
-          return { status: 'error', message: 'Ukuran file melebihi batas (maks 5MB)' };
+          return { status: 'error', message: 'Ukuran file melebihi batas (maks 1MB)' };
         }
 
         // Baca file menjadi buffer
@@ -218,7 +218,7 @@ Tambahkan blok kode berikut **SEBELUM** baris `.delete('/:id', ...)` (sebelum en
     },
     {
       body: t.Object({
-        foto: t.File({ maxSize: '5m', type: ['image/jpeg', 'image/png', 'image/webp'] }),
+        foto: t.File({ maxSize: '1m', type: ['image/jpeg', 'image/png', 'image/webp'] }),
       })
     }
   )
@@ -261,6 +261,6 @@ bun run dev
 
 **Skenario 4: Validasi file**
 - Kirim file `.txt` (bukan gambar) → Expect `400` dengan pesan "Hanya file JPEG, PNG, atau WebP yang diizinkan".
-- Kirim file > 5MB → Expect `400`.
+- Kirim file > 1MB → Expect `400`.
 
 Jika semua skenario berjalan sesuai ekspektasi, **Issue #8 dinyatakan SELESAI**.
