@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { GlobalFetchingIndicator } from "@/components/ui/global-loader";
 
 export function Header() {
   const router = useRouter();
@@ -28,14 +29,17 @@ export function Header() {
         <h2 className="text-lg font-semibold text-slate-800 hidden sm:block">Panel Kontrol</h2>
       </div>
       <div className="flex items-center gap-4">
+        <GlobalFetchingIndicator />
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8 bg-slate-200">
-                <AvatarFallback className="text-slate-600 font-bold"><User className="h-4 w-4" /></AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8 bg-slate-200">
+                  <AvatarFallback className="text-slate-600 font-bold"><User className="h-4 w-4" /></AvatarFallback>
+                </Avatar>
+              </Button>
+            }
+          />
           <DropdownMenuContent className="w-56" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">

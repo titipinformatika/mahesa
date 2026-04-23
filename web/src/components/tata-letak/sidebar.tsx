@@ -2,7 +2,21 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, LayoutDashboard, Building, Calendar, Settings } from "lucide-react";
+import { 
+  Users, 
+  LayoutDashboard, 
+  Building, 
+  Calendar, 
+  Settings, 
+  MapPin, 
+  Map, 
+  Coffee, 
+  FileCheck, 
+  UserCheck, 
+  Megaphone, 
+  Database, 
+  FileBarChart 
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getRole, isAuthenticated } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -11,23 +25,35 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [peran, setPeran] = useState<string | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
     // Cek autentikasi: jika belum login, redirect ke halaman masuk
     if (!isAuthenticated()) {
       router.replace("/masuk");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPeran(getRole());
   }, [router]);
+
+  if (!mounted) return null;
 
   // Menu dinamis berdasarkan peran
   const menu = [
     { name: "Dasbor", path: "/dasbor", icon: LayoutDashboard, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan", "pegawai"] },
+    { name: "Pemantauan", path: "/pemantauan", icon: MapPin, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan"] },
     { name: "Pegawai", path: "/pegawai", icon: Users, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
     { name: "Unit Kerja", path: "/unit-kerja", icon: Building, roles: ["admin_dinas"] },
     { name: "Absensi", path: "/absensi", icon: Calendar, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan", "pegawai"] },
+    { name: "Dinas Luar", path: "/dinas-luar", icon: Map, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan", "pegawai"] },
+    { name: "Cuti", path: "/cuti", icon: Coffee, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan", "pegawai"] },
+    { name: "Kinerja", path: "/laporan-harian", icon: FileCheck, roles: ["admin_dinas", "admin_upt", "admin_unit", "pimpinan", "pegawai"] },
+    { name: "Biodata", path: "/biodata", icon: UserCheck, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
+    { name: "Pengumuman", path: "/pengumuman", icon: Megaphone, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
+    { name: "Dapodik", path: "/dapodik", icon: Database, roles: ["admin_dinas"] },
+    { name: "Laporan", path: "/laporan", icon: FileBarChart, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
     { name: "Pengaturan", path: "/pengaturan", icon: Settings, roles: ["admin_dinas"] },
   ];
 
@@ -41,7 +67,7 @@ export function Sidebar() {
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {filteredMenu.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+          const isActive = pathname ? (pathname === item.path || pathname.startsWith(item.path + "/")) : false;
           return (
             <Link
               key={item.path}

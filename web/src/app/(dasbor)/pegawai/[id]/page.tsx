@@ -36,7 +36,7 @@ export default function DetailPegawaiPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     getPegawaiDetail(id)
       .then(res => {
-        if (res.status === "success") setData(res.data);
+        if (res.status === "success") setData(res.data as unknown as PegawaiDetail);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));

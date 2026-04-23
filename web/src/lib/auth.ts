@@ -9,10 +9,12 @@ export function saveAuth(token: string, peran: string) {
 }
 
 export function getToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
   return Cookies.get(TOKEN_KEY);
 }
 
 export function getRole(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
   return Cookies.get(ROLE_KEY);
 }
 

@@ -38,7 +38,7 @@ export default function LoginPage() {
       } else {
         setError(result.message || "Login gagal");
       }
-    } catch (_err) {
+    } catch {
       setError("Tidak dapat terhubung ke server");
     } finally {
       setLoading(false);
