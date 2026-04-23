@@ -2996,4 +2996,4 @@ CORS_ORIGINS=http://localhost:3001
 | **#6** | [Backend] API CRUD Modul Organisasi (Dinas & Unit Kerja) | ✅ Selesai | 22 April 2026 |
 | **#7** | [Backend] API CRUD Modul Pegawai & Fitur Pencarian | ✅ Selesai | 22 April 2026 |
 | **#8** | [Backend] Integrasi MinIO & API Upload Foto Profil | ✅ Selesai | 23 April 2026 |
-| **#9** | [Backend] Sistem Pengajuan Biodata (Workflow Persetujuan) | 📋 Didelegasikan (issue9.md) | 23 April 2026 |
+| **#9** | [Backend] Sistem Pengajuan Biodata (Workflow Persetujuan) | ✅ Selesai | 23 April 2026 |
