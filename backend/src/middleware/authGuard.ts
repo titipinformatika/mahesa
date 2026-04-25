@@ -16,8 +16,11 @@ export const authPlugin = new Elysia()
     // Daftar rute publik yang tidak memerlukan token
     const publicRoutes = [
       '/v1/otentikasi/masuk',
+      '/v1/otentikasi/keluar',
       '/v1/otentikasi/lupa-kata-sandi',
-      '/v1/otentikasi/reset-kata-sandi'
+      '/v1/otentikasi/reset-kata-sandi',
+      '/health',
+      '/'
     ];
 
     if (publicRoutes.includes(path)) {

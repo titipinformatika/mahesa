@@ -15,22 +15,22 @@ import {
   UserCheck, 
   Megaphone, 
   Database, 
-  FileBarChart 
+  FileBarChart,
+  Layers,
+  Clock
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getRole, isAuthenticated } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+export function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [peran, setPeran] = useState<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    // Cek autentikasi: jika belum login, redirect ke halaman masuk
     if (!isAuthenticated()) {
       router.replace("/masuk");
       return;
@@ -54,13 +54,19 @@ export function Sidebar() {
     { name: "Pengumuman", path: "/pengumuman", icon: Megaphone, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
     { name: "Dapodik", path: "/dapodik", icon: Database, roles: ["admin_dinas"] },
     { name: "Laporan", path: "/laporan", icon: FileBarChart, roles: ["admin_dinas", "admin_upt", "admin_unit"] },
+    { name: "Level Unit", path: "/master-data/level-unit", icon: Layers, roles: ["admin_dinas", "admin_upt"] },
+    { name: "Skema Jam Kerja", path: "/master-data/skema-jam-kerja", icon: Clock, roles: ["admin_dinas", "admin_upt"] },
+    { name: "Skema DL", path: "/master-data/skema-dl", icon: MapPin, roles: ["admin_dinas", "admin_upt"] },
     { name: "Pengaturan", path: "/pengaturan", icon: Settings, roles: ["admin_dinas"] },
   ];
 
   const filteredMenu = menu.filter(m => m.roles.includes(peran || ""));
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 hidden md:flex flex-col h-full">
+    <aside className={cn(
+      "w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-full",
+      !isMobile && "hidden md:flex"
+    )}>
       <div className="h-16 flex items-center px-6 border-b border-slate-800">
         <span className="font-bold text-xl text-white tracking-wider">🏛️ MAHESA</span>
       </div>

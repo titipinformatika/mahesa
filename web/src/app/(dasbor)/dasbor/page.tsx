@@ -1,181 +1,233 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getStatistikDasbor, getStatusPegawai } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getRole, removeAuth, isAuthenticated } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Users, 
-  CalendarCheck, 
-  MapPin, 
-  Clock, 
-  TrendingUp,
-  AlertCircle
-} from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Legend 
-} from "recharts";
-import { Badge } from "@/components/ui/badge";
+import { Users, UserCheck, TrendingUp, LogOut, Clock, Calendar, MapPin, Building } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getStatistikDasbor } from "@/lib/api/dasbor";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+
+const mockTrendData = [
+  { name: 'Sen', hadir: 110, cuti: 5, dl: 10 },
+  { name: 'Sel', hadir: 115, cuti: 3, dl: 12 },
+  { name: 'Rab', hadir: 108, cuti: 8, dl: 8 },
+  { name: 'Kam', hadir: 119, cuti: 2, dl: 7 },
+  { name: 'Jum', hadir: 112, cuti: 6, dl: 9 },
+];
+
+const mockUnitData = [
+  { unit: 'Kantor Dinas', hadir: '98%', status: 'Normal' },
+  { unit: 'UPT Soreang', hadir: '95%', status: 'Normal' },
+  { unit: 'SDN 01 Soreang', hadir: '88%', status: 'Perhatian' },
+  { unit: 'SMPN 01 Soreang', hadir: '92%', status: 'Normal' },
+];
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['dasbor-statistik'],
-    queryFn: getStatistikDasbor,
-    refetchInterval: 60000,
+  const router = useRouter();
+  const [peran, setPeran] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.replace("/masuk");
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPeran(getRole());
+  }, [router]);
+
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['statistik-dasbor'],
+    queryFn: async () => {
+        const res = await getStatistikDasbor();
+        return res.data;
+    },
   });
 
-  const { data: statusPegawai, isLoading: isLoadingStatus } = useQuery({
-    queryKey: ['dasbor-status-pegawai'],
-    queryFn: () => getStatusPegawai(),
-    refetchInterval: 30000,
-  });
+  const handleLogout = () => {
+    removeAuth();
+    router.replace("/masuk");
+  };
 
-  const chartData = stats?.data?.grafik_kehadiran || [
-    { name: 'Sen', hadir: 85, terlambat: 5, absen: 10 },
-    { name: 'Sel', hadir: 88, terlambat: 3, absen: 9 },
-    { name: 'Rab', hadir: 82, terlambat: 8, absen: 10 },
-    { name: 'Kam', hadir: 90, terlambat: 2, absen: 8 },
-    { name: 'Jum', hadir: 87, terlambat: 4, absen: 9 },
+  const dashboardItems = [
+    { label: "Total Pegawai", nilai: stats?.total_pegawai ?? 0, ikon: Users, gradien: "from-blue-500 to-cyan-500" },
+    { label: "Hadir Hari Ini", nilai: stats?.hadir_hari_ini ?? 0, ikon: UserCheck, gradien: "from-emerald-500 to-teal-500" },
+    { label: "Pegawai Cuti", nilai: stats?.cuti_hari_ini ?? 0, ikon: Calendar, gradien: "from-orange-500 to-amber-500" },
+    { label: "Dinas Luar", nilai: stats?.dl_hari_ini ?? 0, ikon: MapPin, gradien: "from-violet-500 to-purple-500" },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Ringkasan Dasbor</h1>
-        <p className="text-slate-500 text-sm">Informasi terkini mengenai kehadiran dan status pegawai hari ini</p>
+    <div className="space-y-8 p-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Dasbor Analitik
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Pantau kesehatan organisasi dan kehadiran pegawai secara real-time.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground bg-secondary px-3 py-1 rounded-full border border-border">
+                {peran || "Memuat..."}
+            </span>
+            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive transition-colors">
+                <LogOut className="size-4 mr-2" /> Keluar
+            </Button>
+        </div>
       </div>
 
-      {/* Statistik Utama */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Pegawai" 
-          value={stats?.data?.total_pegawai || 0} 
-          icon={<Users className="w-5 h-5 text-blue-600" />}
-          bgColor="bg-blue-50"
-          isLoading={isLoadingStats}
-        />
-        <StatCard 
-          title="Hadir Hari Ini" 
-          value={stats?.data?.hadir_hari_ini || 0} 
-          icon={<CalendarCheck className="w-5 h-5 text-green-600" />}
-          bgColor="bg-green-50"
-          isLoading={isLoadingStats}
-        />
-        <StatCard 
-          title="Sedang Cuti" 
-          value={stats?.data?.sedang_cuti || 0} 
-          icon={<AlertCircle className="w-5 h-5 text-yellow-600" />}
-          bgColor="bg-yellow-50"
-          isLoading={isLoadingStats}
-        />
-        <StatCard 
-          title="Dinas Luar" 
-          value={stats?.data?.sedang_dl || 0} 
-          icon={<MapPin className="w-5 h-5 text-purple-600" />}
-          bgColor="bg-purple-50"
-          isLoading={isLoadingStats}
-        />
+        {isLoading ? (
+            Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-xl" />
+            ))
+        ) : (
+            dashboardItems.map((item) => {
+                const Ikon = item.ikon;
+                return (
+                    <Card key={item.label} className="group overflow-hidden border-border/40 hover:shadow-lg transition-all duration-300">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl font-bold mt-1 tracking-tight">{item.nilai}</p>
+                                        {item.label === "Hadir Hari Ini" && stats && (
+                                            <span className="text-xs font-medium text-emerald-500">
+                                                {stats.persentase_kehadiran}%
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={`size-12 rounded-2xl bg-gradient-to-br ${item.gradien} flex items-center justify-center text-white shadow-inner group-hover:scale-110 transition-transform duration-300`}>
+                                    <Ikon className="size-6" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                );
+            })
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Grafik Kehadiran */}
-        <Card className="lg:col-span-2 border-slate-200 shadow-sm">
+        <Card className="lg:col-span-2 border-border/40 overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2 text-slate-400" />
-              Trend Kehadiran (7 Hari Terakhir)
-            </CardTitle>
+            <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="size-5 text-primary" /> Tren Kehadiran Mingguan
+                </CardTitle>
+                <div className="flex items-center gap-4 text-xs font-medium">
+                    <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-primary" /> Hadir</div>
+                    <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-amber-500" /> Cuti</div>
+                    <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-violet-500" /> DL</div>
+                </div>
+            </div>
           </CardHeader>
-          <CardContent className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
-                />
-                <Legend iconType="circle" />
-                <Bar dataKey="hadir" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={32} />
-                <Bar dataKey="terlambat" stackId="a" fill="#f59e0b" barSize={32} />
-                <Bar dataKey="absen" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="h-[300px] p-0 pr-4 pb-4">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <AreaChart data={mockTrendData}>
+                        <defs>
+                            <linearGradient id="colorHadir" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1}/>
+                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
+                        <Tooltip 
+                            contentStyle={{ backgroundColor: 'var(--background)', borderColor: 'var(--border)', borderRadius: '8px' }}
+                            itemStyle={{ fontSize: 12 }}
+                        />
+                        <Area type="monotone" dataKey="hadir" stroke="var(--primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorHadir)" />
+                        <Area type="monotone" dataKey="cuti" stroke="#f59e0b" strokeWidth={2} fill="transparent" />
+                        <Area type="monotone" dataKey="dl" stroke="#8b5cf6" strokeWidth={2} fill="transparent" />
+                    </AreaChart>
+                </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Status Pegawai Real-time */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle className="text-lg font-bold flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-slate-400" />
-              Status Real-time
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="size-5 text-primary" /> Aktivitas Terbaru
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-              {isLoadingStatus ? (
-                <div className="p-8 text-center text-slate-400">Memuat status...</div>
-              ) : statusPegawai?.data?.slice(0, 6).map((item: any, idx: number) => (
-                <div key={idx} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
-                      {item.nama_lengkap.charAt(0)}
+          <CardContent className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/20 hover:bg-muted/30 transition-colors">
+                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                        {i}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{item.nama_lengkap}</p>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-tighter">{item.unit}</p>
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">Pegawai {i} melakukan presensi</p>
+                        <p className="text-xs text-muted-foreground">08:{i*5} WIB • Unit Kerja {String.fromCharCode(64 + i)}</p>
                     </div>
-                  </div>
-                  <Badge variant="outline" className={cn(
-                    "text-[10px] font-bold px-2 py-0 border-none",
-                    item.status === 'Bekerja' ? 'text-green-600 bg-green-50' :
-                    item.status === 'Dinas Luar' ? 'text-purple-600 bg-purple-50' :
-                    item.status === 'Cuti' ? 'text-blue-600 bg-blue-50' : 'text-slate-400 bg-slate-50'
-                  )}>
-                    {item.status}
-                  </Badge>
                 </div>
-              ))}
-            </div>
-            <div className="p-3 bg-slate-50/50 border-t border-slate-100 text-center">
-              <Link href="/pemantauan" className="text-xs font-bold text-blue-600 hover:underline">Lihat Selengkapnya</Link>
-            </div>
+            ))}
+            <Button variant="link" className="w-full text-xs text-primary" onClick={() => router.push('/pemantauan')}>
+                Lihat Semua Aktivitas
+            </Button>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-border/40">
+          <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                  <Building className="size-5 text-primary" /> Perbandingan Performa Unit Kerja
+              </CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div className="relative overflow-x-auto rounded-lg border border-border/40">
+                  <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                          <tr>
+                              <th className="px-6 py-3 font-semibold">Nama Unit</th>
+                              <th className="px-6 py-3 font-semibold text-center">Tingkat Kehadiran</th>
+                              <th className="px-6 py-3 font-semibold text-center">Status</th>
+                              <th className="px-6 py-3 font-semibold text-right">Aksi</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40">
+                          {mockUnitData.map((u, i) => (
+                              <tr key={i} className="bg-background hover:bg-muted/20 transition-colors">
+                                  <td className="px-6 py-4 font-medium">{u.unit}</td>
+                                  <td className="px-6 py-4 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                          <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                              <div 
+                                                className={`h-full ${u.status === 'Perhatian' ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                                                style={{ width: u.hadir }}
+                                              />
+                                          </div>
+                                          <span className="text-xs font-bold">{u.hadir}</span>
+                                      </div>
+                                  </td>
+                                  <td className="px-6 py-4 text-center">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                          u.status === 'Perhatian' 
+                                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                                            : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                      }`}>
+                                          {u.status}
+                                      </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                      <Button variant="ghost" size="sm" className="h-7 text-xs">Detail</Button>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+          </CardContent>
+      </Card>
     </div>
   );
 }
-
-function StatCard({ title, value, icon, bgColor, isLoading }: any) {
-  return (
-    <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{title}</p>
-            {isLoading ? (
-              <Skeleton className="h-8 w-16 mt-1" />
-            ) : (
-              <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
-            )}
-          </div>
-          <div className={`p-3 ${bgColor} rounded-xl`}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-import Link from "next/link";
-import { cn } from "@/lib/utils";

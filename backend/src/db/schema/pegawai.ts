@@ -66,6 +66,7 @@ export const pegawai = pgTable('pegawai', {
   nuptk: varchar('nuptk', { length: 20 }).unique(),
   nik: varchar('nik', { length: 16 }).notNull().unique(),
   nama_lengkap: varchar('nama_lengkap', { length: 255 }).notNull(),
+  jabatan: varchar('jabatan', { length: 255 }),
   jenis_kelamin: varchar('jenis_kelamin', { length: 20 }).notNull(),
   tempat_lahir: varchar('tempat_lahir', { length: 100 }),
   tanggal_lahir: date('tanggal_lahir'),
@@ -98,6 +99,8 @@ export const pegawai = pgTable('pegawai', {
   nama_kontak_darurat: varchar('nama_kontak_darurat', { length: 255 }),
   telepon_kontak_darurat: varchar('telepon_kontak_darurat', { length: 20 }),
 
+  id_perangkat: varchar('id_perangkat', { length: 255 }),
+  sisa_cuti: integer('sisa_cuti').notNull().default(12),
   status_biodata: varchar('status_biodata', { length: 20 }).notNull().default('belum_lengkap'),
   aktif: boolean('aktif').notNull().default(true),
   catatan: text('catatan'),

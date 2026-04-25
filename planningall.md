@@ -2650,9 +2650,9 @@ mobile/
 [ ] Backend: Konfigurasi Redis + MinIO
 [ ] Web: Inisialisasi Next.js + Tailwind + shadcn/ui
 [ ] Web: Tata letak dasar (sidebar, header, routing)
-[ ] Mobile: Inisialisasi proyek Flutter
-[ ] Mobile: Struktur Clean Architecture
-[ ] Mobile: Inti (Dio, Riverpod, GoRouter, tema)
+[x] Mobile: Inisialisasi proyek Flutter (Issue #21)
+[x] Mobile: Struktur Clean Architecture (Issue #21)
+[x] Mobile: Inti (Dio, Riverpod, GoRouter, SecureStorage) (Issue #21)
 [ ] Docker-compose (PostgreSQL, Redis, MinIO)
 [ ] Repositori Git + strategi branching
 ```
@@ -2667,15 +2667,15 @@ mobile/
 [ ] Backend: Modul pengajuan biodata (kirim, setujui, tolak)
 [ ] Backend: Registrasi token FCM
 [ ] Backend: Unggah file (MinIO) untuk foto profil
-[ ] Backend: Seeder database (contoh pegawai, unit)
+[x] Backend: Seeder database (contoh pegawai, unit) (Fase 2)
 [ ] Web: Halaman masuk
 [ ] Web: Tata letak dasbor + sidebar (menu sesuai peran)
 [ ] Web: Daftar pegawai (DataTable) + halaman detail
 [ ] Web: Manajemen unit kerja
 [ ] Web: Halaman persetujuan biodata
-[ ] Mobile: Layar splash + masuk
-[ ] Mobile: Layar beranda (navigasi bawah, sesuai peran)
-[ ] Mobile: Profil + formulir biodata + ganti kata sandi
+[x] Mobile: Layar splash + masuk (Issue #21)
+[x] Mobile: Layar beranda (navigasi bawah, sesuai peran) (Issue #22)
+[x] Mobile: Profil + formulir biodata + ganti kata sandi (Issue #22)
 [ ] Mobile: Penampil pohon organisasi
 [ ] Mobile: Daftar pegawai unit
 ```
@@ -2683,18 +2683,18 @@ mobile/
 ### Fase 3: Absensi & Dinas Luar (Minggu 5-7)
 
 ```
-[ ] Backend: Modul absensi (sistem titik absensi, validasi GPS)
-[ ] Backend: CRUD skema dinas luar
-[ ] Backend: Modul dinas luar (pengajuan, setujui, tolak, batalkan)
-[ ] Backend: Pelacakan DL real-time (log lokasi, penyimpanan Redis)
-[ ] Backend: Endpoint ringkasan/rekap absensi
-[ ] Backend: Endpoint deteksi terlambat/tidak hadir
+[x] Backend: Modul absensi (sistem titik absensi, validasi GPS) (Issue #23)
+[x] Backend: CRUD skema dinas luar (Issue #24)
+[x] Backend: Modul dinas luar (pengajuan, setujui, tolak, batalkan) (Issue #24)
+[x] Backend: Pelacakan DL real-time (log lokasi, penyimpanan Redis) (Issue #24)
+[x] Backend: Endpoint ringkasan/rekap absensi (Issue #23)
+[x] Backend: Endpoint deteksi terlambat/tidak hadir (Issue #23)
 [ ] Backend: Layanan notifikasi + integrasi FCM
-[ ] Web: Halaman rekap absensi (DataTable + Kalender)
-[ ] Web: Halaman sorot pegawai terlambat/tidak hadir
-[ ] Web: Halaman rekap DL
-[ ] Web: Peta pelacakan DL real-time (Leaflet + OpenStreetMap)
-[ ] Web: Halaman konfigurasi skema DL
+[x] Web: Halaman rekap absensi (DataTable + Kalender) (Issue #25)
+[x] Web: Halaman sorot pegawai terlambat/tidak hadir (Issue #25)
+[x] Web: Halaman rekap DL (Issue #25)
+[x] Web: Peta pelacakan DL real-time (Leaflet + OpenStreetMap) (Issue #26)
+[x] Web: Halaman konfigurasi skema DL (Issue #25)
 [ ] Mobile: Layar absensi (GPS + selfie + jam masuk/pulang)
 [ ] Mobile: Formulir pengajuan DL (pemilih skema, tujuan, tanggal)
 [ ] Mobile: Layar absensi DL (multi-checkpoint)
@@ -2927,12 +2927,12 @@ CORS_ORIGINS=http://localhost:3001
 ## 16. Daftar Periksa Kesiapan Produksi
 
 ### Backend
-- [ ] Semua endpoint terlindungi (Otentikasi + Otorisasi Peran)
-- [ ] Pembatasan akses aktif
-- [ ] Validasi input di semua endpoint (TypeBox)
-- [ ] Validasi radius GPS berfungsi
+- [x] Semua endpoint terlindungi (Otentikasi + Otorisasi Peran)
+- [x] Pembatasan akses aktif
+- [x] Validasi input di semua endpoint (TypeBox)
+- [x] Validasi radius GPS berfungsi
 - [ ] Notifikasi push (FCM) berfungsi
-- [ ] Unggah file + kompresi berfungsi
+- [x] Unggah file + kompresi berfungsi
 - [ ] Tugas terjadwal berjalan (cron reset cuti, pengingat)
 - [ ] Penanganan error tidak membocorkan detail internal
 - [ ] Indeks database optimal
@@ -2942,27 +2942,27 @@ CORS_ORIGINS=http://localhost:3001
 - [ ] HTTPS diwajibkan (produksi)
 
 ### Dasbor Web
-- [ ] Responsif (Desktop + Tablet)
-- [ ] Dukungan mode gelap
-- [ ] Status memuat + pembatas error
-- [ ] Umpan balik validasi formulir jelas
-- [ ] Peta pelacakan real-time berfungsi
-- [ ] Ekspor data berfungsi (Excel)
+- [x] Responsif (Desktop + Tablet)
+- [x] Dukungan mode gelap
+- [x] Status memuat + pembatas error
+- [x] Umpan balik validasi formulir jelas
+- [x] Peta pelacakan real-time berfungsi
+- [x] Ekspor data berfungsi (Excel)
 - [ ] Impor/sinkronisasi Dapodik berfungsi
 - [ ] Lighthouse ≥ 90
 - [ ] Menu/akses berdasarkan peran
 - [ ] Pengujian E2E alur kritis
 
 ### Aplikasi Mobile
-- [ ] GPS + selfie absensi berfungsi (kantor & DL)
+- [x] GPS + selfie absensi berfungsi (kantor & DL)
 - [ ] Deteksi lokasi palsu aktif
 - [ ] Notifikasi push + deep linking berfungsi
 - [ ] Login biometrik
 - [ ] Cache offline (profil, absensi terakhir)
-- [ ] Unggah foto/dokumen berfungsi
-- [ ] Performa mulus (60fps)
-- [ ] Penanganan izin sesuai (kamera, GPS, penyimpanan)
-- [ ] Antarmuka berdasarkan peran (pegawai vs pimpinan unit kerja)
+- [x] Unggah foto/dokumen berfungsi
+- [x] Performa mulus (60fps)
+- [x] Penanganan izin sesuai (kamera, GPS, penyimpanan)
+- [x] Antarmuka berdasarkan peran (pegawai vs pimpinan unit kerja)
 - [ ] Aset toko aplikasi siap
 
 ---
@@ -3000,3 +3000,31 @@ CORS_ORIGINS=http://localhost:3001
 | **#10** | [Backend] Seeder Database Master | ✅ Selesai | 23 April 2026 |
 | **#11** | [Backend] Modul Absensi (GPS & Selfie Verification) | ✅ Selesai | 23 April 2026 |
 | **#13** | [Web] Tata Letak Dasbor & Manajemen Pegawai Dasar | ✅ Selesai | 23 April 2026 |
+| **#23** | [Backend] Modul Absensi & Validasi Titik Kehadiran | ✅ Selesai | 24 April 2026 |
+| **#24** | [Backend] Modul Dinas Luar & Pelacakan Real-time | ✅ Selesai | 24 April 2026 |
+| **#25** | [Web] Manajemen Absensi & Konfigurasi Dinas Luar | ✅ Selesai | 24 April 2026 |
+| **#26** | [Web] Peta Pelacakan Dinas Luar Real-time | ✅ Selesai | 24 April 2026 |
+| **#27** | [Mobile] Absensi Harian & GPS Selfie | ✅ Selesai | 24 April 2026 |
+| **#28** | [Mobile] Pengajuan Dinas Luar & Multi-Checkpoint | ✅ Selesai | 24 April 2026 |
+| **#29** | [Mobile] Dashboard Pimpinan: Persetujuan & Pantauan | ✅ Selesai | 24 April 2026 |
+| **#30** | [Backend] Modul Cuti & Manajemen Saldo | ✅ Selesai | 24 April 2026 |
+| **#31** | [Backend] Modul Laporan Kinerja Harian (LHKP) & Review Rekan | ✅ Selesai | 24 April 2026 |
+| **#32** | [Web] Dasbor Rekap Cuti & Kinerja Harian | ✅ Selesai | 24 April 2026 |
+| **#33** | [Mobile] Modul Pengajuan Cuti & Saldo Pegawai | ✅ Selesai | 24 April 2026 |
+| **#34** | [Mobile] Input Laporan Harian (LHKP) & Review Rekan | ✅ Selesai | 24 April 2026 |
+| **#35** | [Mobile] Pimpinan: Manajemen LHKP & Persetujuan Cuti | ✅ Selesai | 24 April 2026 |
+| **#36** | [Backend] Modul Statistik, Laporan & Ekspor Data | ✅ Selesai | 24 April 2026 |
+| **#37** | [Backend] Modul Dapodik, Pengumuman & Cron Jobs | ✅ Selesai | 24 April 2026 |
+| **#38** | [Web] Dasbor Analitik & Pemantauan Pegawai | ✅ Selesai | 24 April 2026 |
+| **#39** | [Web] Sinkronisasi Dapodik & Manajemen Konten | ✅ Selesai | 24 April 2026 |
+| **#40** | [Mobile] Dasbor Pegawai & Sistem Pengumuman | ✅ Selesai | 24 April 2026 |
+| **#41** | [Mobile] Pimpinan: Pelaporan ke Dinas | ✅ Selesai | 24 April 2026 |
+| **#42** | [Backend] Stabilitas, Pengujian Komprehensif & Kesiapan Produksi | ✅ Selesai | 24 April 2026 |
+| **#43** | [Web] Kualitas UI/UX, Pengujian E2E & Aksesibilitas | ✅ Selesai | 24 April 2026 |
+| **#44** | [Mobile] Keamanan, Performa, Pengujian & Persiapan Rilis | ✅ Selesai | 24 April 2026 |
+| **#45** | [Infra] CI/CD, Monitoring, Dokumentasi API & Audit Keamanan | ✅ Selesai | 24 April 2026 |
+| **#47** | [Mobile] Perbaikan Bug Stabilitas, Izin Lokasi & Peningkatan UI/UX | ✅ Selesai | 25 April 2026 |
+| **#50** | [Mobile] Perombakan Login (NIP/NIK/Biometrik) & Redesign Dashboard | ✅ Selesai | 25 April 2026 |
+| **#51** | [Mobile] Implementasi Absensi (GPS+Selfie), Cuti, DL & Redesign Header Dashboard | ✅ Selesai | 25 April 2026 |
+
+

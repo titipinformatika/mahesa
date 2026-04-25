@@ -1,0 +1,64 @@
+
+> web@0.1.0 lint
+> eslint
+
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\dasbor\page.tsx
+  26:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\dasbor\page.tsx:26:5
+  24 |       return;
+  25 |     }
+> 26 |     setPeran(getRole());
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  27 |   }, [router]);
+  28 |
+  29 |   const handleLogout = () => {  react-hooks/set-state-in-effect
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\pegawai\page.tsx
+  45:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\app\(dasbor)\pegawai\page.tsx:45:5
+  43 |
+  44 |   useEffect(() => {
+> 45 |     fetchPegawai(search, page);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  46 |     // eslint-disable-next-line react-hooks/exhaustive-deps
+  47 |   }, [page]);
+  48 |  react-hooks/set-state-in-effect
+
+D:\MYDATA\Project\MAHESA\web\src\app\(otentikasi)\masuk\page.tsx
+  38:14  warning  '_err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\MYDATA\Project\MAHESA\web\src\components\tema-toggle.tsx
+  11:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\MYDATA\Project\MAHESA\web\src\components\tema-toggle.tsx:11:5
+   9 |
+  10 |   useEffect(() => {
+> 11 |     setDimuat(true);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  12 |     setGelap(document.documentElement.classList.contains("dark"));
+  13 |   }, []);
+  14 |  react-hooks/set-state-in-effect
+
+✖ 4 problems (3 errors, 1 warning)
+

@@ -57,10 +57,28 @@ async function seed() {
       tanggal_masuk: '2020-01-01',
     }).returning();
 
+    // 5. Create Pegawai User
+    const pegawaiUser = await db.insert(pengguna).values({
+      email: 'pegawai@mahesa.go.id',
+      hash_kata_sandi: hashedPassword, // admin123
+      peran: 'pegawai',
+    }).returning();
+    const idPegawaiUser = pegawaiUser[0].id;
+
+    // 6. Create Pegawai profile for that user
+    await db.insert(pegawai).values({
+      id_pengguna: idPegawaiUser,
+      id_unit_kerja: idUnit,
+      nik: '1234567890123457',
+      nama_lengkap: 'Budi Pegawai Mahesa',
+      jenis_kelamin: 'Laki-laki',
+      tanggal_masuk: '2022-01-01',
+    });
+
     console.log("✅ Seeding selesai!");
     console.log("Admin Email: admin@mahesa.go.id");
-    console.log("Admin Pass: admin123");
-    console.log("Admin Pegawai ID:", adminPegawai[0].id);
+    console.log("Pegawai Email: pegawai@mahesa.go.id");
+    console.log("Password: admin123");
 
   } catch (error) {
     console.error("Error Seeding:", error);

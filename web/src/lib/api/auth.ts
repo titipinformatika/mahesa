@@ -1,4 +1,4 @@
-import { fetchPublic } from "./client";
+import { fetchPublic, fetchWithToken } from "./client";
 import { ApiResponse, LoginResponseData } from "@/types/api";
 
 interface LoginPayload {
@@ -11,4 +11,8 @@ export async function loginAPI(payload: LoginPayload): Promise<ApiResponse<Login
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function getProfile() {
+  return fetchWithToken<ApiResponse<any>>('/v1/otentikasi/profil-saya');
 }

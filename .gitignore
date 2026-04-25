@@ -128,3 +128,6 @@ dist
 .pub/
 build/
 flutter_*.png
+
+# Documentation
+docs/

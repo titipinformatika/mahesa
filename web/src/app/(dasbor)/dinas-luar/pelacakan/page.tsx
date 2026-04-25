@@ -1,46 +1,52 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Plane, Map as MapIcon, Loader2 } from "lucide-react";
 
+// Import PetaPelacakan secara dinamis karena Leaflet membutuhkan objek 'window'
 const PetaPelacakan = dynamic(() => import("@/components/peta/peta-pelacakan"), {
   ssr: false,
-  loading: () => <div className="h-[600px] w-full bg-slate-100 animate-pulse rounded-xl" />
+  loading: () => (
+    <div className="h-[600px] w-full bg-muted animate-pulse rounded-xl flex items-center justify-center">
+      <div className="flex flex-col items-center gap-2">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Memuat peta interaktif...</p>
+      </div>
+    </div>
+  )
 });
 
-export default function PelacakanDLPage() {
+export default function PelacakanDinasLuarPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Pelacakan Dinas Luar</h1>
-        <p className="text-slate-500 text-sm">Pantau lokasi real-time pegawai yang sedang bertugas di luar kantor</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <MapIcon className="size-6 text-primary" />
+            Peta Pelacakan Dinas Luar
+          </h1>
+          <p className="text-muted-foreground text-sm">Monitoring posisi pegawai yang sedang bertugas secara real-time</p>
+        </div>
       </div>
 
-      <Card className="border-slate-200 shadow-sm overflow-hidden">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-200">
-          <CardTitle className="text-sm font-semibold text-slate-600 flex items-center">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
-            Peta Lokasi Real-time
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <PetaPelacakan />
-        </CardContent>
+      <Card className="p-1 overflow-hidden border-border/60 shadow-lg">
+        <PetaPelacakan />
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-          <p className="text-xs font-bold text-blue-600 uppercase">Akurasi GPS</p>
-          <p className="text-sm text-blue-800 mt-1">Lokasi diperbarui otomatis setiap kali pegawai melakukan checkpoint atau log posisi.</p>
-        </div>
-        <div className="p-4 bg-purple-50 border border-purple-100 rounded-lg">
-          <p className="text-xs font-bold text-purple-600 uppercase">Privasi</p>
-          <p className="text-sm text-purple-800 mt-1">Pelacakan hanya aktif selama periode penugasan dinas luar yang telah disetujui.</p>
-        </div>
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-          <p className="text-xs font-bold text-slate-500 uppercase">Status Perangkat</p>
-          <p className="text-sm text-slate-700 mt-1">Pastikan pegawai mengaktifkan GPS dan koneksi internet pada aplikasi mobile.</p>
-        </div>
+        <Card className="p-4 bg-primary/5 border-primary/20">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <Plane className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Update Berkala</p>
+              <p className="text-sm font-medium">Data diperbarui tiap 30 detik</p>
+            </div>
+          </div>
+        </Card>
+        {/* Widget tambahan bisa ditaruh di sini nanti */}
       </div>
     </div>
   );

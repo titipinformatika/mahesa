@@ -1,11 +1,25 @@
 import { fetchWithToken } from "./client";
 import { ApiResponse } from "@/types/api";
 
-export async function getStatistikDasbor() {
-  return fetchWithToken<ApiResponse<any>>('/v1/dasbor/statistik');
+export interface StatistikDasbor {
+  total_pegawai: number;
+  hadir_hari_ini: number;
+  cuti_hari_ini: number;
+  dl_hari_ini: number;
+  persentase_kehadiran: number;
 }
 
-export async function getStatusPegawai(id_unit_kerja?: string) {
-  const url = id_unit_kerja ? `/v1/dasbor/status-pegawai?id_unit_kerja=${id_unit_kerja}` : '/v1/dasbor/status-pegawai';
-  return fetchWithToken<ApiResponse<any[]>>(url);
+export interface StatusPegawai {
+  id: string;
+  nama: string;
+  jabatan: string;
+  status: 'Hadir' | 'Cuti' | 'Dinas Luar' | 'Belum Presensi';
+}
+
+export async function getStatistikDasbor() {
+  return fetchWithToken<ApiResponse<StatistikDasbor>>('/statistik/dasbor');
+}
+
+export async function getStatusPegawai() {
+  return fetchWithToken<ApiResponse<StatusPegawai[]>>('/statistik/pantau');
 }

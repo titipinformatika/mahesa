@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../../db';
-import { pegawai, pengguna } from '../../db/schema/pegawai';
+import { pegawai, pengguna, skemaJamKerja } from '../../db/schema/pegawai';
 import { eq, and, ilike, sql, count } from 'drizzle-orm';
 import { authPlugin } from '../../middleware/authGuard';
 import * as bcrypt from 'bcryptjs';
@@ -8,6 +8,125 @@ import { uploadFile, deleteFile, extractKeyFromUrl } from '../../lib/penyimpanan
 
 export const pegawaiRoutes = new Elysia({ prefix: '/v1/pegawai' })
   .use(authPlugin) // Semua endpoint pegawai butuh otentikasi
+
+  // -----------------------------------------------------------
+  // 🕒 MODUL SKEMA JAM KERJA
+  // -----------------------------------------------------------
+  .get('/skema-jam-kerja', async ({ set }: any) => {
+    try {
+      const data = await db.select().from(skemaJamKerja).orderBy(skemaJamKerja.nama);
+      return { status: 'success', data };
+    } catch (error: any) {
+      set.status = 500;
+      return { status: 'error', message: error.message };
+    }
+  })
+
+  .post(
+    '/skema-jam-kerja',
+    async ({ body, user, set }: any) => {
+      try {
+        if (!['admin_dinas', 'admin_upt'].includes(user?.peran)) {
+          set.status = 403;
+          return { status: 'error', message: 'Hanya Admin Dinas atau Admin UPT yang dapat menambah skema jam kerja' };
+        }
+
+        const inserted = await db.insert(skemaJamKerja).values({
+          nama: body.nama,
+          deskripsi: body.deskripsi,
+          hari_kerja_seminggu: body.hari_kerja_seminggu,
+          jam_masuk: body.jam_masuk,
+          jam_pulang: body.jam_pulang,
+          toleransi_terlambat_menit: body.toleransi_terlambat_menit || 15,
+          aktif: body.aktif ?? true,
+        }).returning();
+
+        return { status: 'success', message: 'Skema Jam Kerja berhasil ditambahkan', data: inserted[0] };
+      } catch (error: any) {
+        set.status = 500;
+        return { status: 'error', message: error.message };
+      }
+    },
+    {
+      body: t.Object({
+        nama: t.String(),
+        deskripsi: t.Optional(t.String()),
+        hari_kerja_seminggu: t.Number(),
+        jam_masuk: t.String(),
+        jam_pulang: t.String(),
+        toleransi_terlambat_menit: t.Optional(t.Number()),
+        aktif: t.Optional(t.Boolean()),
+      })
+    }
+  )
+
+  .put(
+    '/skema-jam-kerja/:id',
+    async ({ params: { id }, body, user, set }: any) => {
+      try {
+        if (!['admin_dinas', 'admin_upt'].includes(user?.peran)) {
+          set.status = 403;
+          return { status: 'error', message: 'Hanya Admin Dinas atau Admin UPT yang dapat mengubah skema jam kerja' };
+        }
+
+        const updated = await db.update(skemaJamKerja).set({
+          ...body,
+          diperbarui_pada: new Date(),
+        }).where(eq(skemaJamKerja.id, id)).returning();
+
+        if (updated.length === 0) {
+          set.status = 404;
+          return { status: 'error', message: 'Skema tidak ditemukan' };
+        }
+
+        return { status: 'success', message: 'Skema Jam Kerja berhasil diperbarui', data: updated[0] };
+      } catch (error: any) {
+        set.status = 500;
+        return { status: 'error', message: error.message };
+      }
+    },
+    {
+      body: t.Object({
+        nama: t.Optional(t.String()),
+        deskripsi: t.Optional(t.String()),
+        hari_kerja_seminggu: t.Optional(t.Number()),
+        jam_masuk: t.Optional(t.String()),
+        jam_pulang: t.Optional(t.String()),
+        toleransi_terlambat_menit: t.Optional(t.Number()),
+        aktif: t.Optional(t.Boolean()),
+      })
+    }
+  )
+
+  .delete(
+    '/skema-jam-kerja/:id',
+    async ({ params: { id }, user, set }: any) => {
+      try {
+        if (!['admin_dinas', 'admin_upt'].includes(user?.peran)) {
+          set.status = 403;
+          return { status: 'error', message: 'Hanya Admin Dinas atau Admin UPT yang dapat menghapus skema jam kerja' };
+        }
+
+        // Cek penggunaan di pegawai
+        const usage = await db.select({ total: count() }).from(pegawai).where(eq(pegawai.id_skema_jam_kerja, id));
+        if (Number(usage[0].total) > 0) {
+          set.status = 400;
+          return { status: 'error', message: 'Skema ini masih digunakan oleh pegawai dan tidak dapat dihapus' };
+        }
+
+        const deleted = await db.delete(skemaJamKerja).where(eq(skemaJamKerja.id, id)).returning();
+        if (deleted.length === 0) {
+          set.status = 404;
+          return { status: 'error', message: 'Skema tidak ditemukan' };
+        }
+
+        return { status: 'success', message: 'Skema Jam Kerja berhasil dihapus' };
+      } catch (error: any) {
+        set.status = 500;
+        return { status: 'error', message: error.message };
+      }
+    }
+  )
 
   // -----------------------------------------------------------
   // 👥 GET /v1/pegawai/unit-saya
@@ -366,6 +485,35 @@ export const pegawaiRoutes = new Elysia({ prefix: '/v1/pegawai' })
       })
     }
   )
+  
+  // -----------------------------------------------------------
+  // 🔓 POST /v1/pegawai/:id/reset-device
+  // Reset ID perangkat (device binding) pegawai.
+  // -----------------------------------------------------------
+  .post('/:id/reset-device', async ({ params: { id }, user, set }: any) => {
+    try {
+      const allowedRoles = ['admin_dinas', 'admin_upt'];
+      if (!allowedRoles.includes(user?.peran)) {
+        set.status = 403;
+        return { status: 'error', message: 'Hanya Admin Dinas atau Admin UPT yang dapat mereset perangkat' };
+      }
+
+      const updated = await db.update(pegawai).set({
+        id_perangkat: null,
+        diperbarui_pada: new Date(),
+      }).where(eq(pegawai.id, id)).returning();
+
+      if (updated.length === 0) {
+        set.status = 404;
+        return { status: 'error', message: 'Pegawai tidak ditemukan' };
+      }
+
+      return { status: 'success', message: 'ID perangkat berhasil direset' };
+    } catch (error: any) {
+      set.status = 500;
+      return { status: 'error', message: error.message };
+    }
+  })
 
 
   // -----------------------------------------------------------

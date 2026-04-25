@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getPetaLangsung } from "@/lib/api";
+import { getPetaLangsung } from "@/lib/api/dinas-luar";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 
 // Fix for default marker icons in Leaflet with Next.js
 const DefaultIcon = L.icon({
@@ -33,11 +35,13 @@ export default function PetaPelacakan() {
 
   if (!mounted) return <div className="h-[600px] bg-slate-100 animate-pulse rounded-xl" />;
 
+  const locations = data?.data || [];
+
   return (
-    <div className="h-[600px] w-full rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
+    <div className="h-[600px] w-full rounded-xl overflow-hidden relative">
       {isLoading && (
-        <div className="absolute top-4 right-4 z-[1000] bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-medium text-slate-600 shadow-sm border border-slate-200">
-          Memperbarui lokasi...
+        <div className="absolute top-4 right-4 z-[1000] bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-primary shadow-sm border border-primary/20 animate-pulse">
+          SINKRONISASI LOKASI...
         </div>
       )}
       
@@ -52,18 +56,23 @@ export default function PetaPelacakan() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {data?.data?.map((item: any) => (
+        {locations.map((item: any) => (
           <Marker 
             key={item.id} 
             position={[parseFloat(item.latitude), parseFloat(item.longitude)]}
           >
             <Popup>
-              <div className="p-1">
-                <p className="font-bold text-slate-800 m-0">{item.nama_lengkap}</p>
-                <p className="text-xs text-slate-500 m-0">{item.id_unit_kerja}</p>
-                <hr className="my-2" />
-                <p className="text-xs m-0 text-blue-600"><b>Tujuan:</b> {item.tujuan}</p>
-                <p className="text-[10px] text-slate-400 mt-1">Update terakhir: {new Date(item.waktu_log).toLocaleTimeString()}</p>
+              <div className="p-1 min-w-[150px]">
+                <p className="font-bold text-sm text-slate-800 m-0">{item.nama_lengkap}</p>
+                <p className="text-[10px] text-muted-foreground m-0">Unit ID: {item.id_unit_kerja}</p>
+                <div className="my-2 border-t border-slate-100" />
+                <p className="text-xs m-0">
+                  <span className="text-primary font-semibold">Tujuan:</span> {item.tujuan}
+                </p>
+                <p className="text-[9px] text-slate-400 mt-2 flex justify-between">
+                  <span>Update: {format(new Date(item.waktu_log), "HH:mm:ss", { locale: idLocale })}</span>
+                  <span className="text-emerald-500 font-bold">ONLINE</span>
+                </p>
               </div>
             </Popup>
           </Marker>

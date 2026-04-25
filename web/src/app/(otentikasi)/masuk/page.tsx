@@ -31,15 +31,13 @@ export default function LoginPage() {
       const result = await loginAPI({ email, password });
 
       if (result.status === "success" && result.data) {
-        // Simpan token & peran ke Cookies
         saveAuth(result.data.token, result.data.peran);
-        // Redirect ke dasbor
         router.push("/dasbor");
       } else {
         setError(result.message || "Login gagal");
       }
-    } catch {
-      setError("Tidak dapat terhubung ke server");
+    } catch (err: any) {
+      setError(err.message || "Tidak dapat terhubung ke server");
     } finally {
       setLoading(false);
     }
@@ -70,7 +68,7 @@ export default function LoginPage() {
             <Input
               id="email"
               type="email"
-              placeholder="admin@disdik.go.id"
+              placeholder="admin@mahesa.go.id"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

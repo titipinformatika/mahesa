@@ -1,348 +1,204 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPegawaiList, createPegawai, deletePegawai, getUnitKerjaList } from "@/lib/api";
+import { getPegawaiList } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Eye, Trash2, Edit, MoreHorizontal } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Search, Plus, Eye, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { showSuccess, showError, showPromise } from "@/lib/toast";
 
-const formSchema = z.object({
-  nama_lengkap: z.string().min(3, "Nama minimal 3 karakter"),
-  nik: z.string().length(16, "NIK harus 16 digit"),
-  nip: z.string().optional(),
-  email: z.string().email("Email tidak valid"),
-  jenis_kelamin: z.enum(["L", "P"]),
-  id_unit_kerja: z.string().min(1, "Unit kerja wajib dipilih"),
-  peran: z.string(),
-});
+interface Pegawai {
+  id: string;
+  nama_lengkap: string;
+  nip?: string;
+  nik: string;
+  jenis_kelamin: string;
+  aktif: boolean;
+}
 
 export default function DaftarPegawaiPage() {
-  const queryClient = useQueryClient();
+  const [pegawai, setPegawai] = useState<Pegawai[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [meta, setMeta] = useState({ total_halaman: 1 });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['pegawai', page, search],
-    queryFn: () => getPegawaiList(page, 10, search),
-  });
-
-  const { data: units } = useQuery({
-    queryKey: ['unit-kerja-list'],
-    queryFn: getUnitKerjaList,
-  });
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nama_lengkap: "",
-      nik: "",
-      email: "",
-      jenis_kelamin: "L",
-      id_unit_kerja: "",
-      peran: "pegawai",
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createPegawai,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pegawai'] });
-      setIsAddSheetOpen(false);
-      form.reset();
+  const fetchPegawai = async (q = "", p = 1) => {
+    try {
+      setLoading(true);
+      const res = await getPegawaiList(p, 10, q);
+      if (res.status === "success") {
+        setPegawai((res.data as any) || []);
+        setMeta({ total_halaman: res.meta?.total_halaman || 1 });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePegawai,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pegawai'] });
-      setItemToDelete(null);
-    }
-  });
+  useEffect(() => {
+    fetchPegawai(search, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    showPromise(createMutation.mutateAsync(values), {
-      loading: "Sedang menambahkan pegawai...",
-      success: "Pegawai berhasil ditambahkan",
-      error: "Gagal menambahkan pegawai"
-    });
-  }
-
-  const handleDelete = (id: string) => {
-    showPromise(deleteMutation.mutateAsync(id), {
-      loading: "Sedang menonaktifkan pegawai...",
-      success: "Pegawai berhasil dinonaktifkan",
-      error: "Gagal menonaktifkan pegawai"
-    });
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchPegawai(search, 1);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Manajemen Pegawai</h1>
-          <p className="text-slate-500 text-sm">Kelola data pegawai pada instansi Anda</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Manajemen Pegawai</h1>
+          <p className="text-muted-foreground text-sm mt-1">Kelola data pegawai pada instansi Anda</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddSheetOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Tambah Pegawai
+        <Button className="gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-300">
+          <Plus className="size-4" /> Tambah Pegawai
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50">
-          <div className="relative max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Cari nama pegawai..." 
-              className="pl-9 bg-white"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
+      <Card className="overflow-hidden border-border/60">
+        <div className="p-4 border-b border-border bg-muted/30">
+          <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama pegawai..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button type="submit" variant="secondary">Cari</Button>
+          </form>
         </div>
 
-        <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
-              <TableHead>Nama Lengkap</TableHead>
-              <TableHead>NIP / NIK</TableHead>
-              <TableHead>Unit Kerja</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-[60px] rounded-full" /></TableCell>
-                  <TableCell><div className="flex justify-end gap-2"><Skeleton className="h-8 w-8 rounded-md" /><Skeleton className="h-8 w-8 rounded-md" /></div></TableCell>
-                </TableRow>
-              ))
-            ) : data?.data?.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium text-slate-800">{p.nama_lengkap}</TableCell>
-                <TableCell className="text-slate-500 text-xs">{p.nip || p.nik}</TableCell>
-                <TableCell className="text-slate-600 text-xs">{p.unit_kerja?.nama || '-'}</TableCell>
-                <TableCell>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Aktif</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Link href={`/pegawai/${p.id}`}>
-                      <Button variant="ghost" size="sm" className="text-blue-600"><Eye className="w-4 h-4"/></Button>
-                    </Link>
-                    <Button variant="ghost" size="sm" className="text-slate-600"><Edit className="w-4 h-4"/></Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-600"
-                      onClick={() => setItemToDelete(p.id)}
-                    >
-                      <Trash2 className="w-4 h-4"/>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-muted-foreground uppercase bg-muted/40 border-b border-border">
+              <tr>
+                <th className="px-6 py-3 font-medium">Nama Lengkap</th>
+                <th className="px-6 py-3 font-medium">NIP / NIK</th>
+                <th className="px-6 py-3 font-medium">L/P</th>
+                <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                  </tr>
+                ))
+              ) : pegawai.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center text-muted-foreground">
+                    <Users className="size-10 mx-auto mb-3 opacity-40" />
+                    Tidak ada data pegawai.
+                  </td>
+                </tr>
+              ) : (
+                pegawai.map((p, i) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-border/50 hover:bg-muted/40 transition-colors animate-masuk-fade"
+                    style={{ animationDelay: `${i * 40}ms` }}
+                  >
+                    <td className="px-6 py-4 font-medium">{p.nama_lengkap}</td>
+                    <td className="px-6 py-4 text-muted-foreground font-mono text-xs">{p.nip || p.nik}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{p.jenis_kelamin === "L" ? "Laki-laki" : "Perempuan"}</td>
+                    <td className="px-6 py-4">
+                      {p.aktif ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30">Aktif</Badge>
+                      ) : (
+                        <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/30">Nonaktif</Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link href={`/pegawai/${p.id}`}>
+                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 gap-1">
+                          <Eye className="size-4" /> Detail
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50/50">
-          <span className="text-sm text-slate-500">
-            Halaman {page} dari {data?.meta?.total_halaman || 1}
+        <div className="md:hidden divide-y divide-border">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-4 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            ))
+          ) : pegawai.length === 0 ? (
+            <div className="p-10 text-center text-muted-foreground">
+              <Users className="size-10 mx-auto mb-3 opacity-40" />
+              Tidak ada data pegawai.
+            </div>
+          ) : (
+            pegawai.map((p, i) => (
+              <div
+                key={p.id}
+                className="p-4 hover:bg-muted/40 transition-colors animate-masuk-fade"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{p.nama_lengkap}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">{p.nip || p.nik}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline" className="text-xs">{p.jenis_kelamin === "L" ? "Laki-laki" : "Perempuan"}</Badge>
+                      {p.aktif ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">Aktif</Badge>
+                      ) : (
+                        <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">Nonaktif</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Link href={`/pegawai/${p.id}`}>
+                    <Button variant="ghost" size="sm" className="text-primary gap-1">
+                      <Eye className="size-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="p-4 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-3 bg-muted/20">
+          <span className="text-sm text-muted-foreground">
+            Halaman {page} dari {meta.total_halaman || 1}
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
               Sebelumnya
             </Button>
-            <Button variant="outline" size="sm" disabled={page >= (data?.meta?.total_halaman || 1)} onClick={() => setPage(p => p + 1)}>
+            <Button variant="outline" size="sm" disabled={page >= (meta.total_halaman || 1)} onClick={() => setPage((p) => p + 1)}>
               Selanjutnya
             </Button>
           </div>
         </div>
-      </div>
-
-      <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
-        <SheetContent className="sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>Tambah Pegawai Baru</SheetTitle>
-            <SheetDescription>
-              Lengkapi formulir di bawah untuk mendaftarkan pegawai baru ke sistem.
-            </SheetDescription>
-          </SheetHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-6">
-              <FormField
-                control={form.control}
-                name="nama_lengkap"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nama Lengkap</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Contoh: Asep Riki" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="nik"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>NIK (16 Digit)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="320..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="pegawai@mahesa.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="jenis_kelamin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Jenis Kelamin</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih L/P" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="L">Laki-laki</SelectItem>
-                          <SelectItem value="P">Perempuan</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="id_unit_kerja"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit Kerja</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih Unit" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {units?.data?.map(u => (
-                            <SelectItem key={u.id} value={u.id}>{u.nama}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <SheetFooter className="pt-6">
-                <Button type="submit" className="w-full bg-blue-600" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Menyimpan..." : "Simpan Pegawai"}
-                </Button>
-              </SheetFooter>
-            </form>
-          </Form>
-        </SheetContent>
-      </Sheet>
-
-      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tindakan ini akan menonaktifkan akun pegawai tersebut. Data absensi dan kinerja yang sudah ada tetap tersimpan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => itemToDelete && handleDelete(itemToDelete)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Ya, Nonaktifkan
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      </Card>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../../db';
 import { pengguna, pegawai } from '../../db/schema/pegawai';
-import { eq } from 'drizzle-orm';
+import { unitKerja } from '../../db/schema/organisasi';
+import { eq, or, and } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
 import { authPlugin } from '../../middleware/authGuard';
 
@@ -18,28 +19,80 @@ export const otentikasiRoutes = new Elysia({ prefix: '/v1/otentikasi' })
     '/masuk',
     async ({ body, jwt, set }) => {
       try {
-        const { email, password } = body;
+        const { identifier, password, device_id } = body;
 
-        const userList = await db.select().from(pengguna).where(eq(pengguna.email, email)).limit(1);
-        const user = userList[0];
+        // Cari pengguna berdasarkan email, nip, atau nik
+        const userList = await db.select({
+          pengguna: pengguna,
+          pegawai: pegawai
+        })
+        .from(pengguna)
+        .leftJoin(pegawai, eq(pegawai.id_pengguna, pengguna.id))
+        .where(
+          or(
+            eq(pengguna.email, identifier),
+            eq(pegawai.nip, identifier),
+            eq(pegawai.nik, identifier)
+          )
+        )
+        .limit(1);
 
-        if (!user || !user.aktif) {
+        const result = userList[0];
+        if (!result || !result.pengguna.aktif) {
           set.status = 401;
-          return { status: 'error', message: 'Email tidak ditemukan atau akun tidak aktif' };
+          return { status: 'error', message: 'Identitas tidak ditemukan atau akun tidak aktif' };
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.hash_kata_sandi);
-        if (!isPasswordValid) {
-          set.status = 401;
-          return { status: 'error', message: 'Kata sandi salah' };
-        }
+        const user = result.pengguna;
+        const dataPegawai = result.pegawai;
 
-        const pegawaiList = await db
-          .select({ id: pegawai.id, id_unit_kerja: pegawai.id_unit_kerja })
-          .from(pegawai)
-          .where(eq(pegawai.id_pengguna, user.id))
-          .limit(1);
-        const dataPegawai = pegawaiList[0];
+        // Cek apakah role ini boleh passwordless (hanya pegawai dan pimpinan yang menggunakan mobile)
+        const isPasswordlessRole = ['pegawai', 'pimpinan'].includes(user.peran);
+
+        // --- Logika Device Binding & Passwordless ---
+        if (device_id) {
+          if (!dataPegawai) {
+             set.status = 400;
+             return { status: 'error', message: 'Akun ini tidak tertaut dengan data pegawai.' };
+          }
+
+          if (!dataPegawai.id_perangkat) {
+            // Pendaftaran perangkat pertama kali
+            await db.update(pegawai).set({ id_perangkat: device_id }).where(eq(pegawai.id, dataPegawai.id));
+          } else if (dataPegawai.id_perangkat !== device_id) {
+            // Perangkat tidak cocok
+            set.status = 403;
+            return { 
+              status: 'error', 
+              message: 'Akun Anda tertaut pada perangkat lain. Hubungi Admin untuk reset perangkat.' 
+            };
+          }
+
+          // Jika role adalah pegawai/pimpinan dan device_id valid/terdaftar, bypass password.
+          if (!isPasswordlessRole) {
+             // Role lain (seperti admin) tetap butuh password meski di mobile
+             if (!password) {
+               set.status = 400;
+               return { status: 'error', message: 'Kata sandi wajib diisi untuk peran ini' };
+             }
+             const isPasswordValid = await bcrypt.compare(password, user.hash_kata_sandi);
+             if (!isPasswordValid) {
+               set.status = 401;
+               return { status: 'error', message: 'Kata sandi salah' };
+             }
+          }
+        } else {
+          // Login dari Web (tidak ada device_id), wajib cek password
+          if (!password) {
+             set.status = 400;
+             return { status: 'error', message: 'Kata sandi wajib diisi' };
+          }
+          const isPasswordValid = await bcrypt.compare(password, user.hash_kata_sandi);
+          if (!isPasswordValid) {
+            set.status = 401;
+            return { status: 'error', message: 'Kata sandi salah' };
+          }
+        }
 
         await db.update(pengguna).set({ terakhir_login: new Date() }).where(eq(pengguna.id, user.id));
 
@@ -53,13 +106,18 @@ export const otentikasiRoutes = new Elysia({ prefix: '/v1/otentikasi' })
 
         return { status: 'success', message: 'Berhasil login', data: { token, peran: user.peran } };
       } catch (error) {
+        console.error(error);
         set.status = 500;
         return { status: 'error', message: 'Terjadi kesalahan pada server' };
       }
     },
     { 
-      body: t.Object({ email: t.String({ format: 'email' }), password: t.String() }),
-      beforeHandle: () => {} // Bypass global hook untuk route ini
+      body: t.Object({ 
+        identifier: t.String(), 
+        password: t.String(),
+        device_id: t.Optional(t.String())
+      }),
+      beforeHandle: () => {}
     }
   )
 
@@ -100,8 +158,20 @@ export const otentikasiRoutes = new Elysia({ prefix: '/v1/otentikasi' })
       id: pengguna.id,
       email: pengguna.email,
       peran: pengguna.peran,
-      terakhir_login: pengguna.terakhir_login
-    }).from(pengguna).where(eq(pengguna.id, user.id)).limit(1);
+      terakhir_login: pengguna.terakhir_login,
+      nama_lengkap: pegawai.nama_lengkap,
+      nik: pegawai.nik,
+      nip: pegawai.nip,
+      jabatan: pegawai.jabatan,
+      nama_unit: unitKerja.nama,
+      id_unit_kerja: pegawai.id_unit_kerja,
+      telepon: pegawai.telepon
+    })
+    .from(pengguna)
+    .leftJoin(pegawai, eq(pegawai.id_pengguna, pengguna.id))
+    .leftJoin(unitKerja, eq(pegawai.id_unit_kerja, unitKerja.id))
+    .where(eq(pengguna.id, user.id))
+    .limit(1);
     
     return { status: 'success', data: userList[0] };
   })

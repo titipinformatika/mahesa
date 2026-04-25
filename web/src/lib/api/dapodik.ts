@@ -1,16 +1,29 @@
 import { fetchWithToken } from "./client";
 import { ApiResponse } from "@/types/api";
 
-export async function checkDapodikDiff() {
-  return fetchWithToken<ApiResponse<any>>('/v1/dapodik/perbedaan');
+export interface DapodikItem {
+    nip: string;
+    nama: string;
+    jabatan: string;
+    idUnit: string;
 }
 
-export async function runDapodikSync() {
-  return fetchWithToken<ApiResponse<any>>('/v1/dapodik/sinkronisasi', {
-    method: 'POST'
+export interface DapodikDiffResult {
+    new: DapodikItem[];
+    updated: { old: { nip: string; nama_lengkap: string; jabatan: string }; new: DapodikItem }[];
+    removed: DapodikItem[];
+}
+
+export async function checkDapodikDiff(data: DapodikItem[]) {
+  return fetchWithToken<ApiResponse<DapodikDiffResult>>('/dapodik/diff', {
+    method: 'POST',
+    body: JSON.stringify({ data })
   });
 }
 
-export async function getDapodikSyncHistory() {
-  return fetchWithToken<ApiResponse<any[]>>('/v1/dapodik/riwayat-sinkronisasi');
+export async function runDapodikSync(additions: DapodikItem[], updates: DapodikItem[]) {
+  return fetchWithToken<ApiResponse<{ message: string }>>('/dapodik/sinkronisasi', {
+    method: 'POST',
+    body: JSON.stringify({ additions, updates })
+  });
 }

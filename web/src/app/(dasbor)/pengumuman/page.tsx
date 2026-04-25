@@ -1,146 +1,195 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPengumumanList, deletePengumuman } from "@/lib/api";
+import { getPengumumanList, createPengumuman, updatePengumuman, deletePengumuman, Pengumuman } from "@/lib/api/pengumuman";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit, Megaphone, Pin, Clock } from "lucide-react";
-import { showSuccess, showError } from "@/lib/toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Megaphone, Plus, Trash2, Edit2, Calendar, Target, Globe } from "lucide-react";
+import { showError, showSuccess } from "@/lib/toast";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import Link from "next/link";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
 export default function PengumumanPage() {
   const queryClient = useQueryClient();
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [editing, setEditing] = useState<Pengumuman | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data: list, isLoading } = useQuery({
     queryKey: ['pengumuman'],
-    queryFn: getPengumumanList,
+    queryFn: async () => {
+        const res = await getPengumumanList();
+        return res.data;
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: createPengumuman,
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['pengumuman'] });
+        showSuccess("Pengumuman berhasil dibuat");
+        setIsOpen(false);
+    },
+    onError: (err: Error) => showError(err.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<Pengumuman> }) => updatePengumuman(id, data),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['pengumuman'] });
+        showSuccess("Pengumuman berhasil diperbarui");
+        setIsOpen(false);
+        setEditing(null);
+    },
+    onError: (err: Error) => showError(err.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deletePengumuman,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pengumuman'] });
-      showSuccess("Pengumuman berhasil dihapus");
-      setItemToDelete(null);
+        queryClient.invalidateQueries({ queryKey: ['pengumuman'] });
+        showSuccess("Pengumuman berhasil dihapus");
     },
-    onError: (err: any) => showError(err.message)
+    onError: (err: Error) => showError(err.message),
   });
 
-  const getJenisBadge = (jenis: string) => {
-    switch (jenis) {
-      case 'peringatan':
-        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-none font-bold">Peringatan</Badge>;
-      case 'mendesak':
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none font-bold">Mendesak</Badge>;
-      case 'kenaikan_gaji':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none font-bold">Finance</Badge>;
-      default:
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-bold">Informasi</Badge>;
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+        judul: formData.get('judul') as string,
+        konten: formData.get('konten') as string,
+        tanggalBerlaku: formData.get('tanggalBerlaku') as string,
+        tanggalBerakhir: formData.get('tanggalBerakhir') as string,
+        peranTarget: formData.get('peranTarget') === 'semua' ? null : formData.get('peranTarget') as string,
+    };
+
+    if (editing) {
+        updateMutation.mutate({ id: editing.id, data });
+    } else {
+        createMutation.mutate(data);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 p-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Manajemen Pengumuman</h1>
-          <p className="text-slate-500 text-sm">Kelola informasi dan pengumuman untuk seluruh pegawai</p>
+          <h1 className="text-3xl font-bold tracking-tight">Manajemen Pengumuman</h1>
+          <p className="text-muted-foreground mt-1">Kelola informasi massal untuk seluruh pegawai.</p>
         </div>
-        <Link href="/pengumuman/baru">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" /> Buat Pengumuman
-          </Button>
-        </Link>
+        <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if(!v) setEditing(null); }}>
+            <DialogTrigger render={<Button className="gap-2"><Plus className="size-4" /> Buat Pengumuman</Button>} />
+            <DialogContent className="sm:max-w-[500px]">
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{editing ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Judul</label>
+                            <Input name="judul" defaultValue={editing?.judul} required placeholder="Contoh: Pemberitahuan Cuti Bersama" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Konten</label>
+                            <Textarea name="konten" defaultValue={editing?.konten} required placeholder="Isi pengumuman..." rows={4} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Tanggal Mulai</label>
+                                <Input name="tanggalBerlaku" type="date" defaultValue={editing?.tanggalBerlaku} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Tanggal Berakhir</label>
+                                <Input name="tanggalBerakhir" type="date" defaultValue={editing?.tanggalBerakhir} required />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Target Audiens</label>
+                            <Select name="peranTarget" defaultValue={editing?.peranTarget || 'semua'}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih Target" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="semua">Semua Pegawai</SelectItem>
+                                    <SelectItem value="pimpinan">Pimpinan Saja</SelectItem>
+                                    <SelectItem value="admin_unit">Admin Unit Saja</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
+                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                            {editing ? 'Simpan Perubahan' : 'Terbitkan'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-48 bg-slate-100 animate-pulse rounded-xl border border-slate-200" />
-          ))
-        ) : data?.data && data.data.length > 0 ? (
-          data.data.map((item) => (
-            <Card key={item.id} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-              {item.disematkan && (
-                <div className="absolute top-0 right-0">
-                  <div className="bg-blue-600 text-white p-1 rounded-bl-lg">
-                    <Pin className="w-3 h-3" />
-                  </div>
-                </div>
-              )}
-              <CardHeader>
-                <div className="flex justify-between items-start mb-2">
-                  {getJenisBadge(item.jenis)}
-                  <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {format(new Date(item.dibuat_pada), 'dd MMM yyyy', { locale: id })}
-                  </span>
-                </div>
-                <CardTitle className="text-lg font-bold text-slate-800">{item.judul}</CardTitle>
-                <CardDescription className="line-clamp-2 text-slate-600">
-                  {item.isi}
-                </CardDescription>
-              </CardHeader>
-              <CardFooter className="bg-slate-50/50 border-t border-slate-100 py-3 flex justify-between">
-                <Badge variant="outline" className="text-[10px] uppercase text-slate-500 border-slate-300">
-                  Target: {item.target}
-                </Badge>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="text-slate-600 hover:bg-white"><Edit className="w-4 h-4"/></Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-red-600 hover:bg-red-50"
-                    onClick={() => setItemToDelete(item.id)}
-                  >
-                    <Trash2 className="w-4 h-4"/>
-                  </Button>
-                </div>
-              </CardFooter>
+            Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)
+        ) : list?.length === 0 ? (
+            <Card className="border-dashed border-2 py-12">
+                <CardContent className="flex flex-col items-center justify-center text-muted-foreground">
+                    <Megaphone className="size-12 mb-4 opacity-20" />
+                    <p>Belum ada pengumuman yang dibuat.</p>
+                </CardContent>
             </Card>
-          ))
         ) : (
-          <div className="md:col-span-2 py-20 flex flex-col items-center justify-center text-slate-400 space-y-4">
-            <Megaphone className="w-12 h-12 opacity-20" />
-            <p>Belum ada pengumuman yang dibuat.</p>
-          </div>
+            list?.map((p) => (
+                <Card key={p.id} className="group border-border/40 hover:border-primary/40 transition-colors">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-lg">{p.judul}</h3>
+                                    <Badge variant={p.aktif ? "default" : "secondary"} className="text-[10px] uppercase font-bold">
+                                        {p.aktif ? 'Aktif' : 'Nonaktif'}
+                                    </Badge>
+                                    {p.peranTarget ? (
+                                        <Badge variant="outline" className="text-[10px] uppercase gap-1">
+                                            <Target className="size-3" /> {p.peranTarget}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="text-[10px] uppercase gap-1">
+                                            <Globe className="size-3" /> Global
+                                        </Badge>
+                                    )}
+                                </div>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.konten}</p>
+                                <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground font-medium">
+                                    <div className="flex items-center gap-1">
+                                        <Calendar className="size-3" />
+                                        {format(new Date(p.tanggalBerlaku), 'dd MMMM yyyy', { locale: id })} - {format(new Date(p.tanggalBerakhir), 'dd MMMM yyyy', { locale: id })}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" onClick={() => { setEditing(p); setIsOpen(true); }}>
+                                    <Edit2 className="size-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => {
+                                    if(confirm('Hapus pengumuman ini?')) deleteMutation.mutate(p.id);
+                                }}>
+                                    <Trash2 className="size-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))
         )}
       </div>
-
-      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Pengumuman?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Pengumuman akan dihapus secara permanen dari semua dashboard pegawai.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => itemToDelete && deleteMutation.mutate(itemToDelete)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Ya, Hapus Permanen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

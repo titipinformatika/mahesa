@@ -1,176 +1,304 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getCutiList, getSaldoCuti } from "@/lib/api";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { useEffect, useState } from "react";
+import { getCutiList, getSaldoCuti, CutiRecord, SaldoCuti } from "@/lib/api/cuti";
+import { getUnitKerjaList, UnitKerja } from "@/lib/api/organisasi";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Coffee, Download, Search, Calendar as CalendarIcon, Wallet } from "lucide-react";
+import { exportToExcel } from "@/lib/excel";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export default function RekapCutiPage() {
-  const [page, setPage] = useState(1);
+  const [data, setData] = useState<CutiRecord[]>([]);
+  const [saldoData, setSaldoData] = useState<SaldoCuti[]>([]);
+  const [units, setUnits] = useState<UnitKerja[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
 
-  const { data: cutiData, isLoading: isLoadingCuti } = useQuery({
-    queryKey: ['cuti', page, status],
-    queryFn: () => getCutiList({ 
-      page, 
-      limit: 10, 
-      status: status === "all" ? undefined : status 
-    }),
-  });
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const [cutiRes, unitsRes, saldoRes] = await Promise.all([
+        getCutiList({}),
+        getUnitKerjaList(),
+        getSaldoCuti()
+      ]);
+      
+      if (cutiRes.status === "success") setData(cutiRes.data || []);
+      if (unitsRes.status === "success") setUnits(unitsRes.data || []);
+      if (saldoRes.status === "success") setSaldoData(saldoRes.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const { data: saldoData, isLoading: isLoadingSaldo } = useQuery({
-    queryKey: ['saldo-cuti'],
-    queryFn: () => getSaldoCuti(),
-  });
+  const fetchFilteredData = async () => {
+    try {
+      setLoading(true);
+      const res = await getCutiList({
+        unit_id: selectedUnit === "all" ? undefined : selectedUnit,
+        status: status === "all" ? undefined : status
+      });
+      if (res.status === "success") {
+        setData(res.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (selectedUnit !== "all" || status !== "all") {
+      fetchFilteredData();
+    } else {
+      fetchInitialData();
+    }
+  }, [selectedUnit, status]);
+
+  const handleExport = async () => {
+    const columns = [
+      { header: "Pegawai", key: "pegawai", width: 30 },
+      { header: "Jenis Cuti", key: "jenis", width: 20 },
+      { header: "Mulai", key: "mulai", width: 15 },
+      { header: "Selesai", key: "selesai", width: 15 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Keterangan", key: "keterangan", width: 40 },
+    ];
+
+    const exportData = data.map(item => ({
+      pegawai: item.pegawai?.nama_lengkap || "-",
+      jenis: item.jenis_cuti,
+      mulai: item.tanggal_mulai,
+      selesai: item.tanggal_selesai,
+      status: item.status.toUpperCase(),
+      keterangan: item.keterangan || "-"
+    }));
+
+    await exportToExcel(exportData, columns, `Rekap_Cuti_${format(new Date(), 'yyyy-MM-dd')}`);
+  };
+
+  const handleExportSaldo = async () => {
+    const columns = [
+      { header: "Pegawai", key: "pegawai", width: 30 },
+      { header: "Jenis Cuti", key: "jenis", width: 20 },
+      { header: "Total Kuota", key: "total", width: 15 },
+      { header: "Terpakai", key: "terpakai", width: 15 },
+      { header: "Sisa Saldo", key: "sisa", width: 15 },
+    ];
+
+    const exportData = saldoData.map(item => ({
+      pegawai: item.nama_lengkap,
+      jenis: item.jenis_cuti,
+      total: item.total,
+      terpakai: item.terpakai,
+      sisa: item.sisa
+    }));
+
+    await exportToExcel(exportData, columns, `Saldo_Cuti_${format(new Date(), 'yyyy-MM-dd')}`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'disetujui':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 font-normal">Disetujui</Badge>;
-      case 'menunggu':
-        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 font-normal">Menunggu</Badge>;
-      case 'ditolak':
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 font-normal">Ditolak</Badge>;
-      case 'dibatalkan':
-        return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 font-normal">Dibatalkan</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      case 'disetujui': return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Disetujui</Badge>;
+      case 'ditolak': return <Badge variant="destructive">Ditolak</Badge>;
+      case 'menunggu': return <Badge variant="secondary">Menunggu</Badge>;
+      case 'dibatalkan': return <Badge variant="outline">Dibatalkan</Badge>;
+      default: return <Badge>{status}</Badge>;
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Manajemen Cuti</h1>
-        <p className="text-slate-500 text-sm">Kelola pengajuan dan saldo cuti pegawai</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Cuti Pegawai</h1>
+          <p className="text-muted-foreground text-sm mt-1">Pantau rekapitulasi pengajuan dan saldo cuti seluruh pegawai</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="pengajuan" className="w-full">
-        <TabsList className="bg-slate-100 p-1 border border-slate-200">
-          <TabsTrigger value="pengajuan" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Daftar Pengajuan
+      <Tabs defaultValue="rekap" className="space-y-4">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="rekap" className="gap-2">
+            <Coffee className="size-4" /> Rekap Pengajuan
           </TabsTrigger>
-          <TabsTrigger value="saldo" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Saldo Cuti
+          <TabsTrigger value="saldo" className="gap-2">
+            <Wallet className="size-4" /> Saldo Cuti
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pengajuan" className="mt-6 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center gap-4">
-              <span className="text-sm font-medium text-slate-600">Filter Status:</span>
-              <Select value={status} onValueChange={(v) => v && setStatus(v)}>
-                <SelectTrigger className="w-[180px] bg-white">
-                  <SelectValue placeholder="Semua Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="menunggu">Menunggu</SelectItem>
-                  <SelectItem value="disetujui">Disetujui</SelectItem>
-                  <SelectItem value="ditolak">Ditolak</SelectItem>
-                </SelectContent>
-              </Select>
+        <TabsContent value="rekap" className="space-y-4">
+          <Card className="overflow-hidden border-border/60">
+            <div className="p-4 border-b border-border bg-muted/30 flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex flex-wrap gap-4 items-center flex-1">
+                <div className="relative flex-1 min-w-[240px] max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari nama pegawai..."
+                    className="pl-9"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  <Select value={selectedUnit} onValueChange={(v) => setSelectedUnit(v || "all")}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Semua Unit Kerja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Unit Kerja</SelectItem>
+                      {units.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.nama}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={status} onValueChange={(v) => setStatus(v || "all")}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Semua Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      <SelectItem value="menunggu">Menunggu</SelectItem>
+                      <SelectItem value="disetujui">Disetujui</SelectItem>
+                      <SelectItem value="ditolak">Ditolak</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button onClick={handleExport} variant="outline" className="gap-2 shrink-0">
+                <Download className="size-4" /> Export Excel
+              </Button>
             </div>
 
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Nama Pegawai</TableHead>
-                  <TableHead>Jenis Cuti</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingCuti ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">Memuat...</TableCell>
-                  </TableRow>
-                ) : cutiData?.data?.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium">{record.pegawai?.nama_lengkap}</TableCell>
-                    <TableCell className="capitalize">{record.jenis_cuti.replace(/_/g, ' ')}</TableCell>
-                    <TableCell className="text-slate-600 text-xs">
-                      {format(new Date(record.tanggal_mulai), 'dd MMM')} - {format(new Date(record.tanggal_selesai), 'dd MMM yyyy')}
-                    </TableCell>
-                    <TableCell className="text-center">{record.total_hari} Hari</TableCell>
-                    <TableCell>{getStatusBadge(record.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="text-blue-600">Detail</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50/50">
-              <span className="text-sm text-slate-500">
-                Halaman {page} dari {cutiData?.meta?.total_halaman || 1}
-              </span>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                  Sebelumnya
-                </Button>
-                <Button variant="outline" size="sm" disabled={page >= (cutiData?.meta?.total_halaman || 1)} onClick={() => setPage(p => p + 1)}>
-                  Selanjutnya
-                </Button>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/40 border-b border-border">
+                  <tr>
+                    <th className="px-6 py-3 font-medium">Pegawai</th>
+                    <th className="px-6 py-3 font-medium">Jenis Cuti</th>
+                    <th className="px-6 py-3 font-medium">Rentang Tanggal</th>
+                    <th className="px-6 py-3 font-medium">Status</th>
+                    <th className="px-6 py-3 font-medium text-right">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-40" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                        <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-24 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : data.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                        <Coffee className="size-12 mx-auto mb-4 opacity-20" />
+                        <p>Tidak ada data pengajuan cuti ditemukan</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    data.filter(d => (d.pegawai?.nama_lengkap || "").toLowerCase().includes(search.toLowerCase())).map((item) => (
+                      <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-foreground">{item.pegawai?.nama_lengkap}</td>
+                        <td className="px-6 py-4 text-muted-foreground">{item.jenis_cuti}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs font-mono">
+                            <CalendarIcon className="size-3" />
+                            {format(new Date(item.tanggal_mulai), 'dd MMM yyyy', { locale: id })} - 
+                            {format(new Date(item.tanggal_selesai), 'dd MMM yyyy', { locale: id })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                        <td className="px-6 py-4 text-right text-xs text-muted-foreground max-w-xs truncate">
+                          {item.keterangan || "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="saldo" className="mt-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Nama Pegawai</TableHead>
-                  <TableHead>Jenis Cuti</TableHead>
-                  <TableHead className="text-center text-blue-600">Total Jatah</TableHead>
-                  <TableHead className="text-center text-red-600">Terpakai</TableHead>
-                  <TableHead className="text-center font-bold text-green-600">Sisa Saldo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingSaldo ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">Memuat...</TableCell>
-                  </TableRow>
-                ) : saldoData?.data?.map((saldo, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{saldo.nama_lengkap}</TableCell>
-                    <TableCell className="capitalize">{saldo.jenis_cuti.replace(/_/g, ' ')}</TableCell>
-                    <TableCell className="text-center">{saldo.total} Hari</TableCell>
-                    <TableCell className="text-center">{saldo.terpakai} Hari</TableCell>
-                    <TableCell className="text-center">
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{saldo.sisa} Hari</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <TabsContent value="saldo" className="space-y-4">
+          <Card className="overflow-hidden border-border/60">
+            <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
+              <h3 className="font-semibold text-lg">Saldo Cuti Pegawai</h3>
+              <Button onClick={handleExportSaldo} variant="outline" className="gap-2">
+                <Download className="size-4" /> Export Saldo
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/40 border-b border-border">
+                  <tr>
+                    <th className="px-6 py-3 font-medium">Pegawai</th>
+                    <th className="px-6 py-3 font-medium">Jenis Cuti</th>
+                    <th className="px-6 py-3 font-medium text-center">Total Kuota</th>
+                    <th className="px-6 py-3 font-medium text-center">Terpakai</th>
+                    <th className="px-6 py-3 font-medium text-right">Sisa Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-48" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>
+                        <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8 mx-auto" /></td>
+                        <td className="px-6 py-4 text-center"><Skeleton className="h-4 w-8 mx-auto" /></td>
+                        <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-8 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : saldoData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                        <Wallet className="size-12 mx-auto mb-4 opacity-20" />
+                        <p>Data saldo cuti tidak tersedia</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    saldoData.filter(d => (d.nama_lengkap || "").toLowerCase().includes(search.toLowerCase())).map((item, idx) => (
+                      <tr key={idx} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-foreground">{item.nama_lengkap}</td>
+                        <td className="px-6 py-4 text-muted-foreground">{item.jenis_cuti}</td>
+                        <td className="px-6 py-4 text-center font-mono">{item.total}</td>
+                        <td className="px-6 py-4 text-center font-mono text-amber-600">{item.terpakai}</td>
+                        <td className="px-6 py-4 text-right">
+                          <Badge variant={item.sisa > 0 ? "secondary" : "destructive"} className="font-mono">
+                            {item.sisa} Hari
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

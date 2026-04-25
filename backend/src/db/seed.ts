@@ -2,6 +2,9 @@ import { db } from './index';
 import { sql } from 'drizzle-orm';
 import { dinas, unitKerja, levelUnitKerja, pejabatUnitKerja } from './schema/organisasi';
 import { pengguna, pegawai, skemaJamKerja, masterJenisKepegawaian } from './schema/pegawai';
+import { jenisCuti, saldoCuti } from './schema/cuti';
+import { jenisKegiatanLhkp } from './schema/lhkp';
+import { skemaDinasLuar } from './schema/dinasLuar';
 import * as bcrypt from 'bcryptjs';
 
 async function seed() {
@@ -19,7 +22,15 @@ async function seed() {
     dinas,
     level_unit_kerja,
     skema_jam_kerja,
-    master_jenis_kepegawaian
+    master_jenis_kepegawaian,
+    saldo_cuti,
+    jenis_cuti,
+    review_rekan,
+    detail_laporan_harian,
+    laporan_harian,
+    penugasan_kegiatan_lhkp,
+    jenis_kegiatan_lhkp,
+    skema_dinas_luar
     CASCADE`);
 
   // =====================================================
@@ -53,11 +64,10 @@ async function seed() {
   const dinasId = dataDinas[0].id;
 
   // =====================================================
-  // 3. UNIT KERJA (Hierarki: Dinas -> UPT -> Sekolah)
+  // 3. UNIT KERJA
   // =====================================================
   console.log('🏢 Memasukkan unit kerja...');
 
-  // 3a. Kantor Dinas (level 1)
   const kantorDinas = await db.insert(unitKerja).values({
     id_dinas: dinasId,
     id_level_unit: levelDinas.id,
@@ -70,7 +80,6 @@ async function seed() {
     radius_absensi_meter: 200,
   }).returning();
 
-  // 3b. UPT Kecamatan (level 2)
   const uptSoreang = await db.insert(unitKerja).values({
     id_dinas: dinasId,
     id_level_unit: levelUpt.id,
@@ -84,7 +93,6 @@ async function seed() {
     radius_absensi_meter: 150,
   }).returning();
 
-  // 3c. Sekolah (level 3)
   const sdn01 = await db.insert(unitKerja).values({
     id_dinas: dinasId,
     id_level_unit: levelSekolah.id,
@@ -116,6 +124,31 @@ async function seed() {
     longitude: '107.5220',
     radius_absensi_meter: 100,
   }).returning();
+
+  // =====================================================
+  // 3d. SEED SKEMA DL UNTUK UNIT
+  // =====================================================
+  console.log('🗺️ Memasukkan skema dinas luar unit...');
+  const templateFull = [
+    { urutan: 1, jenis: 'jam_masuk', label: 'Jam Masuk', aturan_lokasi: 'dimana_saja' },
+    { urutan: 2, jenis: 'sampai_dl', label: 'Sampai Lokasi DL', aturan_lokasi: 'tujuan_dl' },
+    { urutan: 3, jenis: 'jam_pulang', label: 'Jam Pulang', aturan_lokasi: 'dimana_saja' },
+  ];
+
+  await db.insert(skemaDinasLuar).values([
+    { 
+      id_unit_kerja: kantorDinas[0].id, 
+      kode_skema: 'dl_penuh', 
+      label: 'DL Penuh (Dinas)', 
+      titik_titik: templateFull 
+    },
+    { 
+      id_unit_kerja: sdn01[0].id, 
+      kode_skema: 'dl_penuh', 
+      label: 'DL Penuh (Sekolah)', 
+      titik_titik: templateFull 
+    },
+  ]);
 
   // =====================================================
   // 4. SKEMA JAM KERJA
@@ -163,6 +196,8 @@ async function seed() {
     { email: 'guru.ani@disdik.go.id', hash_kata_sandi: hashPassword, peran: 'pegawai' },
     { email: 'guru.budi@disdik.go.id', hash_kata_sandi: hashPassword, peran: 'pegawai' },
     { email: 'kepala.smpn01@disdik.go.id', hash_kata_sandi: hashPassword, peran: 'pimpinan' },
+    { email: 'admin.upt@disdik.go.id', hash_kata_sandi: hashPassword, peran: 'admin_upt' },
+    { email: 'admin.sdn01@disdik.go.id', hash_kata_sandi: hashPassword, peran: 'admin_unit' },
   ]).returning();
 
   // =====================================================
@@ -236,7 +271,6 @@ async function seed() {
       id_pengguna: users[4].id,
       id_unit_kerja: smpn01[0].id,
       id_skema_jam_kerja: jamKerja[1].id,
-      nip: '197803202005011001',
       nik: '3204012003780001',
       nama_lengkap: 'Drs. Cecep Hermawan, M.M.',
       jenis_kelamin: 'Laki-laki',
@@ -248,10 +282,73 @@ async function seed() {
       tanggal_masuk: '2005-01-10',
       status_biodata: 'lengkap',
     },
+    {
+      id_pengguna: users[5].id,
+      id_unit_kerja: uptSoreang[0].id,
+      id_skema_jam_kerja: jamKerja[0].id,
+      nip: '198205152010012002',
+      nik: '3204011505820001',
+      nama_lengkap: 'Dedi Mulyadi, S.Kom.',
+      jenis_kelamin: 'Laki-laki',
+      tempat_lahir: 'Cimahi',
+      tanggal_lahir: '1982-05-15',
+      agama: 'Islam',
+      telepon: '081200000006',
+      alamat: 'Jl. Pasirkoja No. 10, Bandung',
+      tanggal_masuk: '2010-01-15',
+      status_biodata: 'lengkap',
+    },
+    {
+      id_pengguna: users[6].id,
+      id_unit_kerja: sdn01[0].id,
+      id_skema_jam_kerja: jamKerja[0].id,
+      nip: '199205152015012002',
+      nik: '3204011505920001',
+      nama_lengkap: 'Eka Putri, S.E.',
+      jenis_kelamin: 'Perempuan',
+      tempat_lahir: 'Soreang',
+      tanggal_lahir: '1992-05-15',
+      agama: 'Islam',
+      telepon: '081200000007',
+      alamat: 'Jl. Cingcin No. 8, Soreang',
+      tanggal_masuk: '2015-01-15',
+      status_biodata: 'lengkap',
+    },
   ]).returning();
 
   // =====================================================
-  // 8. PEJABAT UNIT KERJA (Kepala Sekolah)
+  // 8. JENIS CUTI & SALDO CUTI
+  // =====================================================
+  console.log('📅 Memasukkan jenis cuti & saldo...');
+  const cutiTypes = await db.insert(jenisCuti).values([
+    { nama: 'Cuti Tahunan', keterangan: 'Jatah 12 hari per tahun', wajibLampiran: false, jatahTahunan: 12 },
+    { nama: 'Cuti Sakit', keterangan: 'Harus melampirkan surat dokter', wajibLampiran: true, jatahTahunan: 0 },
+    { nama: 'Cuti Melahirkan', keterangan: 'Untuk pegawai perempuan', wajibLampiran: true, jatahTahunan: 0 },
+  ]).returning();
+
+  const currentYear = new Date().getFullYear();
+  const saldos = pegawaiList.map(p => ({
+    idPegawai: p.id,
+    idJenisCuti: cutiTypes[0].id, // Cuti Tahunan
+    tahun: currentYear,
+    saldo: 12
+  }));
+  await db.insert(saldoCuti).values(saldos);
+
+  // =====================================================
+  // 9. JENIS KEGIATAN LHKP
+  // =====================================================
+  console.log('📝 Memasukkan jenis kegiatan LHKP...');
+  await db.insert(jenisKegiatanLhkp).values([
+    { nama: 'Mengajar di Kelas', keterangan: 'Kegiatan belajar mengajar rutin' },
+    { nama: 'Menyusun RPP', keterangan: 'Perencanaan pembelajaran' },
+    { nama: 'Mengikuti Rapat Dinas', keterangan: 'Rapat koordinasi' },
+    { nama: 'Melaksanakan Piket', keterangan: 'Piket sekolah harian' },
+    { nama: 'Pengembangan Diri', keterangan: 'Workshop/Pelatihan' },
+  ]);
+
+  // =====================================================
+  // 10. PEJABAT UNIT KERJA (Kepala Sekolah)
   // =====================================================
   console.log('👑 Memasukkan pejabat unit kerja...');
   await db.insert(pejabatUnitKerja).values([
@@ -275,24 +372,6 @@ async function seed() {
   console.log('\n========================================');
   console.log('✅ SEEDING SELESAI!');
   console.log('========================================');
-  console.log('\n📋 Akun yang tersedia (password semua: password123):');
-  console.log('─────────────────────────────────────────');
-  console.log('| Email                          | Peran        |');
-  console.log('|--------------------------------|--------------|');
-  console.log('| admin@disdik.go.id             | admin_dinas  |');
-  console.log('| kepala.sdn01@disdik.go.id      | pimpinan     |');
-  console.log('| guru.ani@disdik.go.id          | pegawai      |');
-  console.log('| guru.budi@disdik.go.id         | pegawai      |');
-  console.log('| kepala.smpn01@disdik.go.id     | pimpinan     |');
-  console.log('─────────────────────────────────────────');
-  console.log('\n🏢 Hierarki Organisasi:');
-  console.log('  Dinas Pendidikan Kab. Bandung');
-  console.log('    ├── Kantor Dinas Pendidikan (kantor)');
-  console.log('    └── UPT Pendidikan Kec. Soreang (upt)');
-  console.log('         ├── SD Negeri 01 Soreang (sd)');
-  console.log('         └── SMP Negeri 01 Soreang (smp)');
-  console.log('');
-
   process.exit(0);
 }
 

@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Manajemen Human-resource & Employee System Application",
 };
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,13 +31,16 @@ export default function RootLayout({
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <NextTopLoader color="#2563eb" showSpinner={false} />
-        <QueryProvider>
-          {children}
-          <Toaster richColors closeButton position="top-right" />
-        </QueryProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <QueryProvider>
+            {children}
+            <Toaster richColors closeButton position="top-right" />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

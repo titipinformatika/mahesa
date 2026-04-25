@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getTerlambatList } from "@/lib/api";
+import { getTerlambatHariIni } from "@/lib/api/absensi";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { 
   Table, 
   TableBody, 
@@ -11,125 +12,88 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Download } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { AlertTriangle, Clock, MapPin } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 export default function PegawaiTerlambatPage() {
-  const [bulan, setBulan] = useState<number>(new Date().getMonth() + 1);
-  const [tahun, setTahun] = useState<number>(new Date().getFullYear());
-
   const { data, isLoading } = useQuery({
-    queryKey: ['absensi-terlambat', bulan, tahun],
-    queryFn: () => getTerlambatList(bulan, tahun),
+    queryKey: ["absensi", "terlambat"],
+    queryFn: getTerlambatHariIni,
+    refetchInterval: 60000, // Refresh tiap menit untuk monitoring
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Pegawai Terlambat</h1>
-          <p className="text-slate-500 text-sm">Monitoring pegawai dengan frekuensi keterlambatan tinggi</p>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <AlertTriangle className="size-6 text-amber-500" />
+            Monitoring Terlambat Hari Ini
+          </h1>
+          <p className="text-muted-foreground text-sm">Daftar pegawai yang belum melakukan absen tepat waktu hari ini</p>
         </div>
-        <Button variant="outline" className="border-slate-200">
-          <Download className="w-4 h-4 mr-2" /> Ekspor Laporan
-        </Button>
+        <div className="bg-amber-500/10 text-amber-600 px-3 py-1 rounded-full text-xs font-medium border border-amber-500/20">
+          Total: {data?.data?.length || 0} Pegawai
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Periode:</span>
-            <Select value={bulan.toString()} onValueChange={(v) => v && setBulan(parseInt(v))}>
-              <SelectTrigger className="w-[150px] bg-white">
-                <SelectValue placeholder="Bulan" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>
-                    {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, i, 1))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={tahun.toString()} onValueChange={(v) => v && setTahun(parseInt(v))}>
-              <SelectTrigger className="w-[100px] bg-white">
-                <SelectValue placeholder="Tahun" />
-              </SelectTrigger>
-              <SelectContent>
-                {[tahun - 1, tahun, tahun + 1].map(y => (
-                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Card className="border-amber-200/50 dark:border-amber-500/20 overflow-hidden">
+        <div className="p-4 bg-amber-500/5 border-b border-amber-200/50 dark:border-amber-500/20">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-2">
+            <Clock className="size-3" /> Real-time monitoring: {format(new Date(), "HH:mm", { locale: id })} WIB
+          </p>
         </div>
-
+        
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="font-semibold text-slate-700">Nama Pegawai</TableHead>
-              <TableHead className="font-semibold text-slate-700">Unit Kerja</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-center">Jumlah Terlambat</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-center">Jumlah Tidak Hadir</TableHead>
-              <TableHead className="font-semibold text-slate-700 text-center">Total Hari Bermasalah</TableHead>
+              <TableHead>Pegawai</TableHead>
+              <TableHead>Unit Kerja</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Keterangan</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
+              <TableSkeleton columns={4} rows={5} />
+            ) : data?.data?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-slate-500">
-                  Memuat data keterlambatan...
+                <TableCell colSpan={4} className="h-40 text-center">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
+                    <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 border-none">Luar Biasa!</Badge>
+                    <p>Semua pegawai hadir tepat waktu atau belum ada data keterlambatan.</p>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : data?.data && data.data.length > 0 ? (
-              data.data.map((item: any, idx: number) => {
-                const total = (item.jumlah_terlambat || 0) + (item.jumlah_tidak_hadir || 0);
-                return (
-                  <TableRow key={idx} className={cn("hover:bg-slate-50/50", total > 5 && "bg-red-50/30")}>
-                    <TableCell className="font-medium text-slate-800">
-                      {item.nama_lengkap}
-                    </TableCell>
-                    <TableCell className="text-slate-600">
-                      {item.nama_unit}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="border-yellow-200 text-yellow-700 bg-yellow-50">
-                        {item.jumlah_terlambat} Kali
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="border-red-200 text-red-700 bg-red-50">
-                        {item.jumlah_tidak_hadir} Kali
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-bold">
-                      <span className={cn(total > 5 ? "text-red-600" : "text-slate-700")}>
-                        {total} Hari
-                        {total > 5 && <AlertTriangle className="w-4 h-4 inline ml-1 text-red-500" />}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
             ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-slate-500">
-                  Tidak ada data keterlambatan pada periode ini.
-                </TableCell>
-              </TableRow>
+              data?.data?.map((item: any) => (
+                <TableRow key={item.id} className="hover:bg-amber-50/50 dark:hover:bg-amber-500/5 transition-colors">
+                  <TableCell className="font-medium">
+                    <div>{item.nama_lengkap}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{item.nip || "-"}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <MapPin className="size-3.5 text-muted-foreground" />
+                      {item.nama_unit || "Unit Kerja Tidak Diketahui"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                      Terlambat
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {item.catatan || "Terdeteksi sistem"}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

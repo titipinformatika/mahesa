@@ -1,6 +1,9 @@
 import { getToken } from "../auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+if (typeof window !== "undefined") {
+  console.log('[API_CLIENT] API_URL:', API_URL);
+}
 
 export async function fetchWithToken<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
